@@ -100,7 +100,7 @@ return L('Records saved on this device',lastSave?'saved '+lastSave:'ready',1)+L(
 function bkr(){return db.S.length+db.U.length+db.X.length&&(!db.lastBk||Date.now()-db.lastBk>864e5)?'<button class="item" style="border-color:var(--acc)" onclick="bk()"><span class="nm"><b>Backup reminder</b><small>No backup downloaded in the last 24 hours. Tap to download one now.</small></span></button>':''}
 const $=s=>document.querySelector(s),fm=n=>Math.round(n||0).toLocaleString('en-US'),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const td=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
-const id=()=>++db.seq;
+const id=()=>{const n=window.okpotaniNextId&&window.okpotaniNextId();return n||++db.seq};
 const tot=s=>s.items.reduce((a,i)=>a+i.q*i.p,0),cogs=s=>s.items.reduce((a,i)=>a+i.q*i.c,0);
 const paid=s=>s.pay=='Credit'?s.pays.reduce((a,p)=>a+p.a,0)+(s.advA||0):tot(s);
 const stk=()=>{const m={};db.P.forEach(p=>m[p.name]=p.open);db.U.forEach(u=>m[u.n]=(m[u.n]||0)+u.q);db.S.forEach(s=>s.items.forEach(i=>m[i.n]=(m[i.n]||0)-i.q));return m};
@@ -298,6 +298,7 @@ window.addEventListener('beforeinstallprompt', event => { event.preventDefault()
 window.addEventListener('appinstalled', () => { okpotaniInstallPrompt=null; const b=document.getElementById('installApp'); if(b)b.style.display='none'; });
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(err => console.warn('Offline support could not be enabled:',err)); }); }
 </script>
-<script src="./cloud-config.js"></script>
+<script src="./firebase-config.js"></script>
+<script src="./firebase-bundle.js"></script>
 <script src="./cloud.js"></script>
 </body></html>
