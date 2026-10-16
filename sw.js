@@ -1,4 +1,4 @@
-const CACHE_NAME = 'okpotani-hardware-firebase-v5';
+const CACHE_NAME = 'okpotani-hardware-firebase-v7';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './firebase-config.js', './firebase-bundle.js', './cloud.js'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
