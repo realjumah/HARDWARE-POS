@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Okpotani General Hardware",
-  "short_name": "Okpotani Hardware",
-  "description": "Sales, inventory, purchases, expenses and business records.",
+  "name": "SmartBiz App",
+  "short_name": "SmartBiz",
+  "description": "Sales, inventory, purchases, expenses and business records for your shop.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
