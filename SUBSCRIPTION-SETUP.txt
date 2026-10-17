@@ -1,0 +1,60 @@
+OKPOTANI HARDWARE POS: SUBSCRIPTION UPDATE (14-day trial, 15,000 per month, in-app messages)
+
+DO I NEED A NEW FIREBASE PROJECT?  NO.
+  Use the SAME Firebase project you already use for the POS (hardware-app-15d0b). Do not create a new one and do not
+  change firebase-config.js. The subscription data is stored next to your shop data, in new collections
+  (billing, payments, platform, admins) that are created automatically the first time they are used.
+  The only thing you change in Firebase is the Rules (step 2) and the one "admins" document you add by hand (step 3).
+  Your existing shops, staff, invite codes and records are not touched.
+
+NOTE ON THESE FILES
+  index.html, cloud.js and sw.js in this folder are YOUR latest deployed versions (the ones with the new Orders feature),
+  with only the subscription lines added: 1 line in index.html, 3 lines in cloud.js, and sw.js (cache version v8 and
+  subscription.js added to its file list). Nothing else of yours was changed.
+  firestore.rules: if you have edited your rules in Firebase since the first upload, do NOT paste this whole file.
+  Instead add only the new blocks (isAdmin, notices, billing, payments, platform, admins) to your current rules.
+
+CHANGED FILES (upload these to GitHub, replacing the old ones)
+  index.html   (one line added: loads subscription.js)
+  cloud.js     (two small lines added)
+  sw.js        (new cache version + subscription.js added)
+  subscription.js   NEW
+  firestore.rules   UPDATED: also paste into Firebase (step 2)
+All other files are unchanged and included only so you can upload the whole folder.
+firestore.rules.BEFORE-subscription.txt is your old rules file. Keep it in case you need to go back.
+
+STEP 0  Download a backup from Setup first.
+
+STEP 1  GitHub: upload all files from this folder (replace existing). Commit. Wait 2 minutes.
+        Do not forget subscription.js. The app will not install offline without it.
+
+STEP 2  Firebase console -> Firestore Database -> Rules -> delete all -> paste the whole new firestore.rules -> Publish.
+
+STEP 3  Make yourself the admin (one time, done by hand so nobody can do it from the app):
+        a) Firebase console -> Authentication -> Users -> copy the "User UID" of YOUR account.
+        b) Firestore Database -> Data -> Start collection -> Collection ID:  admins
+        c) Document ID: paste your UID.  Add one field:  name = x , type = boolean , value = true.  Save.
+
+STEP 4  Open the app (close and reopen it twice so the new version loads), sign in with that account.
+        Setup -> Subscription -> Open admin screen -> "Payment details" tab:
+        enter your mobile money number, your fully registered name, price 15000 -> Save.
+        Your own shop is free (admin accounts are never billed).
+
+STEP 5  TEST WITH A SECOND ACCOUNT before telling clients:
+        Sign up with another email, create a cloud shop, check you see "Free trial: 14 days left".
+        Tap Subscribe, send test payment details. On your admin account: Admin -> Payments -> Approve.
+        The second account should get a message "Payment confirmed".
+
+HOW IT WORKS FOR A CLIENT
+  - A new shop gets a 14-day free trial the first time its owner connects to the cloud.
+  - Reminder strip from 5 days before the end. After the end: 3 days of warnings, then the app locks.
+    The locked screen still lets them download a backup. Nothing is ever deleted.
+  - Owner taps Subscribe, pays by mobile money to your number/name, enters the transaction ID and the number paid from.
+  - You see it in Admin -> Payments, check your own mobile money message (amount, sender, transaction ID), tap Approve.
+  - The client gets a bell message in the app. No SMS is sent to clients.
+  - Admin -> Send message: send a notice to all clients or one client. Admin -> Clients: add days, or make a client free.
+
+KNOWN LIMITS
+  - Billing applies to shops connected to the cloud. A phone used only locally (never signed in) is not billed.
+  - The lock is checked inside the app. Someone who edits the app's own files could remove it.
+  - A new email address gets a new trial.

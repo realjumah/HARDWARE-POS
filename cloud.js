@@ -75,7 +75,7 @@
   };
 
   // ---- small helpers ------------------------------------------------------------------------------
-  function status(s){state.status=s;const el=$('#cloudStatusLine');if(el)el.textContent=s;const b=$('#cloudStatusBtn');if(b)b.textContent='Cloud: '+(state.ws?'Connected':state.user?'Signed in':'Off')}
+  function status(s){state.status=s;const el=$('#cloudStatusLine');if(el)el.textContent=s;const b=$('#cloudStatusBtn');if(b)b.textContent='Cloud: '+(state.ws?'Connected':state.user?'Signed in':'Off');if(window.okpotaniSubHook)window.okpotaniSubHook()}
   function friendly(e){
     const c=(e&&e.code)||'';const m=(e&&e.message)||String(e);
     if(/email-already-in-use/.test(c))return 'That email already has an account. Sign in instead, or use “Forgot password”.';
@@ -529,6 +529,7 @@
   window.okpotaniCloudMarkDirty=markDirty;
   window.okpotaniCloudPanel=panel;
   window.okpotaniNextId=nextId;
+  window.okpotaniCloudCore={FB,get state(){return state}};  // used by subscription.js
 
   window.addEventListener('online',()=>{if(state.ws&&state.user){if(!state.unsub)listen();push()}});
   window.addEventListener('offline',()=>{if(state.ws)status('Offline · changes are saved on this phone')});

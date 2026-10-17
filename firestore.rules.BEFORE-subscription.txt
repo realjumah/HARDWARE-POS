@@ -1,0 +1,113 @@
+rules_version = '2';
+
+// Okpotani General Hardware — Firestore security rules.
+// Publish in: Firebase console -> Firestore Database -> Rules -> paste -> Publish.
+//
+// Who can do what:
+//  - Only signed-in users with a VERIFIED email can touch anything.
+//  - A shop's records can be read/written only by members of that shop.
+//  - The owner's shop id is the owner's own user id (one shop per owner, nobody can create spam shops under other ids).
+//  - Staff join only by presenting a valid invite code; the owner can remove staff at any time.
+//  - Records can never be hard-deleted from the app (deletes are small "tombstone" updates), and every
+//    record write must carry the server's time, so a phone cannot back-date changes to hide them.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function verified() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function memberPath(shopId) {
+      return /databases/$(database)/documents/shops/$(shopId)/members/$(request.auth.uid);
+    }
+    function isMember(shopId) {
+      return verified() && exists(memberPath(shopId));
+    }
+    function isOwner(shopId) {
+      return verified() && get(memberPath(shopId)).data.role == 'owner';
+    }
+    function validRecord() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['t', 'k', 'j', 'x', 'u', 'by'])
+          && d.keys().hasAll(['t', 'k', 'j', 'x', 'u', 'by'])
+          && d.t is string && d.t.size() <= 12
+          && d.k is string && d.k.size() <= 64
+          && d.j is string && d.j.size() <= 950000
+          && d.x is bool
+          && d.u == request.time
+          && d.by == request.auth.uid;
+    }
+
+    // Pointer so a person's other phones can find their shop after signing in.
+    match /users/{uid} {
+      allow read, delete: if verified() && request.auth.uid == uid;
+      allow create, update: if verified() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['shopId', 'role', 'at', 'seen'])
+        && request.resource.data.shopId is string
+        && request.resource.data.role in ['owner', 'staff'];
+    }
+
+    // Invite codes: anyone signed in can look up ONE code they know, but nobody can list them.
+    match /invites/{code} {
+      allow get: if verified();
+      allow list, update: if false;
+      allow create: if verified()
+        && code.matches('^[A-Z2-7]{16,32}$')
+        && request.resource.data.keys().hasOnly(['shopId', 'at'])
+        && request.resource.data.shopId == request.auth.uid;
+      allow delete: if verified() && resource.data.shopId == request.auth.uid;
+    }
+
+    match /shops/{shopId} {
+      allow get: if isMember(shopId);
+      allow list: if false;
+      allow create: if verified() && shopId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['name', 'ownerUid', 'at'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.name.size() <= 120;
+      allow update: if isOwner(shopId)
+        && request.resource.data.keys().hasOnly(['name', 'ownerUid', 'at'])
+        && request.resource.data.ownerUid == resource.data.ownerUid;
+      allow delete: if false;
+
+      match /members/{uid} {
+        allow get: if verified() && (request.auth.uid == uid || isOwner(shopId));
+        allow list: if isOwner(shopId);
+        allow create: if verified() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['role', 'email', 'code', 'at'])
+          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.code is string
+          && (
+            // the owner creating their own shop
+            (shopId == request.auth.uid && request.resource.data.role == 'owner')
+            ||
+            // staff joining with a valid invite code
+            (request.resource.data.role == 'staff'
+              && request.resource.data.code.matches('^[A-Z2-7]{16,32}$')
+              && get(/databases/$(database)/documents/invites/$(request.resource.data.code)).data.shopId == shopId)
+          );
+        // the owner can only replace their own invite code
+        allow update: if verified() && request.auth.uid == uid && shopId == request.auth.uid
+          && request.resource.data.role == 'owner'
+          && request.resource.data.keys().hasOnly(['role', 'email', 'code', 'at'])
+          && request.resource.data.email == request.auth.token.email;
+        // staff can leave; the owner can remove staff (but not themselves)
+        allow delete: if verified() && (
+          (request.auth.uid == uid && resource.data.role == 'staff')
+          || (isOwner(shopId) && uid != request.auth.uid)
+        );
+      }
+
+      match /records/{recId} {
+        allow read: if isMember(shopId);
+        allow create, update: if isMember(shopId) && validRecord();
+        allow delete: if false;
+      }
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

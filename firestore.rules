@@ -26,6 +26,10 @@ service cloud.firestore {
     function isOwner(shopId) {
       return verified() && get(memberPath(shopId)).data.role == 'owner';
     }
+    // Platform administrator (you): a document admins/<your uid> that YOU create by hand in the Firebase console.
+    function isAdmin() {
+      return verified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
     function validRecord() {
       let d = request.resource.data;
       return d.keys().hasOnly(['t', 'k', 'j', 'x', 'u', 'by'])
@@ -59,16 +63,30 @@ service cloud.firestore {
     }
 
     match /shops/{shopId} {
-      allow get: if isMember(shopId);
-      allow list: if false;
+      allow get: if isMember(shopId) || isAdmin();
+      allow list: if isAdmin();
       allow create: if verified() && shopId == request.auth.uid
-        && request.resource.data.keys().hasOnly(['name', 'ownerUid', 'at'])
+        && request.resource.data.keys().hasOnly(['name', 'ownerUid', 'at', 'desc'])
         && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.name is string && request.resource.data.name.size() <= 120;
+        && request.resource.data.name is string && request.resource.data.name.size() <= 120
+        && (!('desc' in request.resource.data) || (request.resource.data.desc is string && request.resource.data.desc.size() <= 500));
       allow update: if isOwner(shopId)
-        && request.resource.data.keys().hasOnly(['name', 'ownerUid', 'at'])
-        && request.resource.data.ownerUid == resource.data.ownerUid;
+        && request.resource.data.keys().hasOnly(['name', 'ownerUid', 'at', 'desc'])
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && (!('desc' in request.resource.data) || (request.resource.data.desc is string && request.resource.data.desc.size() <= 500))
+        && (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() <= 120));
       allow delete: if false;
+
+      // Messages from the platform admin to this shop (payment confirmed, reminders, announcements).
+      match /notices/{nid} {
+        allow read: if isMember(shopId) || isAdmin();
+        allow create: if isAdmin()
+          && request.resource.data.keys().hasOnly(['title', 'body', 'kind', 'at'])
+          && request.resource.data.title is string && request.resource.data.title.size() <= 120
+          && request.resource.data.body is string && request.resource.data.body.size() <= 1000
+          && request.resource.data.at == request.time;
+        allow update, delete: if false;
+      }
 
       match /members/{uid} {
         allow get: if verified() && (request.auth.uid == uid || isOwner(shopId));
@@ -103,6 +121,51 @@ service cloud.firestore {
         allow create, update: if isMember(shopId) && validRecord();
         allow delete: if false;
       }
+    }
+
+    // ---- Subscription ----------------------------------------------------------------------------
+    // Billing status of a shop. Members can read it; only the admin can change it.
+    // The owner may create it ONCE, and only as a fresh 14-day trial starting at the server's time.
+    match /billing/{shopId} {
+      allow get: if isMember(shopId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin() || (isOwner(shopId) && shopId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['plan', 'trialStart', 'trialDays', 'paidUntil', 'free'])
+        && request.resource.data.plan == 'shop'
+        && request.resource.data.trialStart == request.time
+        && request.resource.data.trialDays == 14
+        && request.resource.data.paidUntil == null
+        && request.resource.data.free == false);
+      allow update, delete: if isAdmin();
+    }
+
+    // Payment requests sent by a shop owner after paying by mobile money; the admin approves or rejects them.
+    match /payments/{pid} {
+      allow create: if verified() && isOwner(request.resource.data.shopId)
+        && request.resource.data.shopId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['shopId', 'txn', 'from', 'amount', 'months', 'name', 'status', 'at'])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.txn is string && request.resource.data.txn.size() >= 3 && request.resource.data.txn.size() <= 40
+        && request.resource.data.from is string && request.resource.data.from.size() <= 20
+        && request.resource.data.name is string && request.resource.data.name.size() <= 120
+        && request.resource.data.months is int && request.resource.data.months >= 1 && request.resource.data.months <= 12
+        && request.resource.data.amount is number
+        && request.resource.data.at == request.time;
+      allow get, list: if isAdmin() || (verified() && resource.data.shopId == request.auth.uid);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Where to pay (mobile money number, registered name, monthly price). Everyone signed in can read; only the admin can write.
+    match /platform/{docId} {
+      allow get: if verified();
+      allow write: if isAdmin();
+    }
+
+    // Admin marker. Create by hand in the console. Nobody can create or change it from the app.
+    match /admins/{uid} {
+      allow get: if verified() && request.auth.uid == uid;
+      allow write: if false;
     }
 
     // Everything else is closed.
