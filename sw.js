@@ -1,4 +1,4 @@
-const CACHE_NAME = 'okpotani-hardware-firebase-v9';
+const CACHE_NAME = 'okpotani-hardware-firebase-v10';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './firebase-config.js', './firebase-bundle.js', './cloud.js', './subscription.js'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
@@ -30,5 +30,13 @@ self.addEventListener('fetch', event => {
       if (req.mode === 'navigate') return caches.match('./index.html');
       throw new Error('Offline and resource not cached.');
     });
+  }));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    if (list.length) return list[0].focus();
+    return self.clients.openWindow('./');
   }));
 });

@@ -371,7 +371,8 @@
   }
   async function createWorkspace(){
     if(!state.user||!state.user.emailVerified)return alert('Verify your email first.');
-    const name=($('#cloudShopName')?.value||'').trim()||'Okpotani General Hardware';
+    const name=($('#cloudShopName')?.value||'').trim();
+    if(!name||name==='My Shop')return alert('Type your shop name first (Setup > Shop details), then create the cloud shop.');
     if(!confirm('Create the shared cloud shop from the records on THIS phone? Download a backup first if you have not already.'))return;
     try{
       status('Creating shop…');
@@ -489,7 +490,7 @@
       const who=state.user?.email||'';
       body='<p id="cloudStatusLine">'+h(state.status)+'</p>'+
         (who?'<p>Signed in as <b>'+h(who)+'</b></p>':'<p>Sign in on each phone/computer with an account for this shop.</p>')+
-        (state.ws?'<p>Shop: <b>'+h(state.ws.name||'Okpotani Hardware')+'</b> · role: '+h(state.ws.role||'member')+'</p>':'<p>No cloud shop is connected on this phone yet.</p>')+
+        (state.ws?'<p>Shop: <b>'+h(state.ws.name||'My Shop')+'</b> · role: '+h(state.ws.role||'member')+'</p>':'<p>No cloud shop is connected on this phone yet.</p>')+
         (state.conf.length?'<p class="low"><b>'+state.conf.length+' record'+(state.conf.length>1?'s were':' was')+' edited on two devices at once.</b> Open Cloud settings to review.</p>':'')+
         '<button class="btn big" onclick="openOkpotaniCloud()">'+(state.user?'Cloud & team settings':'Sign in / set up cloud')+'</button>';
     }
@@ -508,14 +509,14 @@
       if(state.pending){
         modal('<h2>Your shop is in the cloud</h2><p>Signed in as <b>'+h(state.user.email||'')+'</b>. Load the shared records onto this phone to start syncing.</p><button class="btn big" onclick="okpotaniCloudUsePending()">Load shop records onto this phone</button><button class="btn" onclick="okpotaniCloudSignOut()">Sign out</button><button class="btn" onclick="modal()">Close</button>');return;
       }
-      modal('<h2>Set up your shop in the cloud</h2><p>Signed in as <b>'+h(state.user.email||'')+'</b>. The <b>owner</b> creates the shop from the phone that has the records. Staff join with the owner’s invite code.</p><label>Shop name (owner only)</label><input id="cloudShopName" value="'+h((typeof db!=='undefined'&&db.shop&&db.shop.name)||'Okpotani General Hardware')+'"><button class="btn big" onclick="okpotaniCloudCreate()">Create cloud shop from this phone</button><hr><label>Invite code (staff)</label><input id="cloudInviteCode" autocapitalize="characters" placeholder="XXXX-XXXX-XXXX-XXXX"><button class="btn" onclick="okpotaniCloudJoin()">Join existing shop</button><button class="btn" onclick="okpotaniCloudSignOut()">Sign out</button><button class="btn" onclick="modal()">Close</button>');return;
+      modal('<h2>Set up your shop in the cloud</h2><p>Signed in as <b>'+h(state.user.email||'')+'</b>. The <b>owner</b> creates the shop from the phone that has the records. Staff join with the owner’s invite code.</p><label>Shop name (owner only)</label><input id="cloudShopName" value="'+h((typeof db!=='undefined'&&db.shop&&db.shop.name)||'My Shop')+'"><button class="btn big" onclick="okpotaniCloudCreate()">Create cloud shop from this phone</button><hr><label>Invite code (staff)</label><input id="cloudInviteCode" autocapitalize="characters" placeholder="XXXX-XXXX-XXXX-XXXX"><button class="btn" onclick="okpotaniCloudJoin()">Join existing shop</button><button class="btn" onclick="okpotaniCloudSignOut()">Sign out</button><button class="btn" onclick="modal()">Close</button>');return;
     }
     const w=state.ws,owner=w.role==='owner';
     if(owner&&!fromLoad&&state.members===null)setTimeout(loadOwnerInfo,0);
     const code=owner?(state.inviteCode?'<label>Staff invite code (share privately)</label><input readonly value="'+h(showCode(state.inviteCode))+'" onclick="this.select()"><small>Anyone with this code and a verified account can join and edit shop records.</small><button class="btn" onclick="okpotaniCloudNewCode()">Make a new invite code</button>':'<small>Loading invite code…</small>'):'';
     const mem=owner&&state.members?'<h3>People with access</h3>'+state.members.map(m=>'<div class="stat" style="margin:6px 0"><b>'+h(m.email||m.uid)+'</b> · '+h(m.role)+(m.role!=='owner'?'<br><button class="btn del" onclick="okpotaniCloudRemove(\''+h(m.uid)+'\')">Remove</button>':'')+'</div>').join(''):'';
     const conf=state.conf.length?'<div class="stat"><b class="low">'+state.conf.length+' edit conflict'+(state.conf.length>1?'s':'')+'</b><p>Two phones changed the same record at once. The version on the phone that saved last was kept. A copy of the other version is saved in a file in case you need it.</p><button class="btn" onclick="okpotaniCloudConflictsDl()">Download conflict copies</button><button class="btn" onclick="okpotaniCloudConflictsClear()">Mark as reviewed</button></div>':'';
-    modal('<h2>Cloud & team settings</h2><p>Signed in as <b>'+h(state.user.email||'')+'</b></p><p>Shop: <b>'+h(w.name||'Okpotani Hardware')+'</b><br>Role: '+h(w.role||'member')+'</p><p id="cloudStatusLine">'+h(state.status)+'</p>'+code+mem+conf+'<button class="btn big" onclick="okpotaniCloudSyncNow()">Sync now</button><button class="btn" onclick="okpotaniCloudReload()">Download whole shop again</button><button class="btn" onclick="okpotaniCloudSignOut()">Sign out</button><button class="btn" onclick="modal()">Close</button>');
+    modal('<h2>Cloud & team settings</h2><p>Signed in as <b>'+h(state.user.email||'')+'</b></p><p>Shop: <b>'+h(w.name||'My Shop')+'</b><br>Role: '+h(w.role||'member')+'</p><p id="cloudStatusLine">'+h(state.status)+'</p>'+code+mem+conf+'<button class="btn big" onclick="okpotaniCloudSyncNow()">Sync now</button><button class="btn" onclick="okpotaniCloudReload()">Download whole shop again</button><button class="btn" onclick="okpotaniCloudSignOut()">Sign out</button><button class="btn" onclick="modal()">Close</button>');
   }
 
   // ---- public hooks used by index.html ----------------------------------------------------------------------------------------

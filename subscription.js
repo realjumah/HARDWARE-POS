@@ -14,6 +14,7 @@
   'use strict';
   const DAY = 864e5, TRIAL_DAYS = 14, PERIOD = 30, GRACE = 3, REMIND = 5;
   const PLAN = 'shop', CURRENCY = 'UGX', DEFAULT_PRICE = 15000;
+  const LSA = 'okp_sub_alert_v1';
   const LS = 'okp_sub_v1', LSR = 'okp_sub_read_v1', LSP = 'okp_sub_prof_v1', WSK = 'okp_fb_ws_v1';
 
   const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
@@ -25,7 +26,7 @@
   const rid = () => { const a = new Uint8Array(10); (window.crypto || { getRandomValues: x => { for (let i = 0; i < x.length; i++) x[i] = Math.floor(Math.random() * 256); } }).getRandomValues(a); return Array.from(a, b => b.toString(16).padStart(2, '0')).join(''); };
   const $ = s => document.querySelector(s);
 
-  const S = { key: '', admin: false, role: '', shopId: '', uid: '', unsubs: [], notices: [], pay: null, mine: [], created: false, firstNotices: true, adm: null, tab: 'pay' };
+  const S = { pending: 0, key: '', admin: false, role: '', shopId: '', uid: '', unsubs: [], notices: [], pay: null, mine: [], created: false, firstNotices: true, adm: null, tab: 'pay' };
 
   // ---- status maths (pure) ----------------------------------------------------------------------------------
   function expiryOf(c, now) {
@@ -77,7 +78,8 @@
     S.role = ws.role; S.shopId = ws.shopId; S.uid = user.uid;
     try { const a = await FB().getDoc(R.admin(user.uid)); S.admin = a.exists(); } catch { S.admin = false; }
     if (S.key !== key) return;
-    if (!S.admin) listenBilling();
+    if (!S.admin) listenBilling(); else listenPending();
+    adoptShopName();
     listenNotices();
     loadPay();
     syncProfile();
@@ -106,9 +108,33 @@
     const F = FB();
     S.unsubs.push(F.onSnapshot(F.query(R.notices(S.shopId), F.orderBy('at')), snap => {
       S.notices = snap.docs.map(d => ({ id: d.id, ...d.data(), atMs: ms(d.data().at) || Date.now() })).sort((a, b) => b.atMs - a.atMs);
-      if (!S.firstNotices) snap.docChanges().forEach(ch => { if (ch.type === 'added' && !snap.metadata.hasPendingWrites && typeof toast === 'function') toast('🔔 ' + (ch.doc.data().title || 'New message')); });
-      S.firstNotices = false; paint();
+      if (!S.admin && !snap.metadata.hasPendingWrites) {
+        const lk = 'okp_sub_notified_' + S.shopId, seen = Number(lsGet(lk, 0)) || 0;
+        const fresh = S.notices.filter(n => n.atMs > Math.max(seen, lastRead()));
+        if (fresh.length) {
+          lsSet(lk, Math.max(...fresh.map(n => n.atMs)));
+          alertUser(fresh.length === 1 ? fresh[0].title : fresh.length + ' new messages', fresh.length === 1 ? fresh[0].body : 'Open SmartBiz App to read them.', 'sub-notice');
+          if (typeof toast === 'function' && fresh.length === 1) toast('🔔 ' + fresh[0].title);
+        }
+      }
+      paint();
     }, err => console.warn('notices listener', err && err.code)));
+  }
+  // Admin: payment requests waiting for approval (alerts you when a client sends one).
+  function listenPending() {
+    const F = FB();
+    S.unsubs.push(F.onSnapshot(F.query(R.payments(), F.where('status', '==', 'pending')), snap => {
+      S.pending = snap.docs.length;
+      if (!snap.metadata.hasPendingWrites) {
+        const lk = 'okp_sub_pending_notified', seen = Number(lsGet(lk, 0)) || 0;
+        const fresh = snap.docs.map(d => ({ id: d.id, ...d.data(), atMs: ms(d.data().at) || Date.now() })).filter(p => p.atMs > seen);
+        if (fresh.length) {
+          lsSet(lk, Math.max(...fresh.map(p => p.atMs)));
+          alertUser(fresh.length === 1 ? 'New payment request' : fresh.length + ' new payment requests', fresh.length === 1 ? money(fresh[0].amount) + ' · Txn ' + fresh[0].txn : 'Open the admin screen to review them.', 'sub-pay');
+        }
+      }
+      paint();
+    }, err => console.warn('pending listener', err && err.code)));
   }
   async function loadPay() { try { const p = await FB().getDoc(R.plat()); S.pay = p.exists() ? p.data() : {}; } catch { S.pay = S.pay || null; } }
   async function loadMine() {
@@ -124,6 +150,49 @@
   }
   const origSset = window.sset;
   if (typeof origSset === 'function') window.sset = function () { const r = origSset.apply(this, arguments); setTimeout(syncProfile, 200); return r; };
+
+  // ---- alerts: phone notification (uses the phone's own tone/vibration) or a beep + vibration inside the app -----
+  let actx = null;
+  document.addEventListener('click', () => {
+    try {
+      if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) actx = new AC(); }
+      if (actx && actx.state === 'suspended') actx.resume();
+    } catch { }
+  }, { passive: true });
+  const notifOk = () => { try { return typeof Notification !== 'undefined' && Notification.permission === 'granted'; } catch { return false; } };
+  const alertMode = () => { const m = lsGet(LSA); return (m === 'phone' || m === 'inapp' || m === 'off') ? m : (notifOk() ? 'phone' : 'inapp'); };
+  function beep() {
+    try {
+      if (!actx || actx.state !== 'running') return; const t = actx.currentTime;
+      [[880, 0], [1175, 0.2]].forEach(([f, d]) => {
+        const o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = f; o.connect(g); g.connect(actx.destination);
+        g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.25, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.18);
+        o.start(t + d); o.stop(t + d + 0.2);
+      });
+    } catch { }
+  }
+  function buzz() { try { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]); } catch { } }
+  async function alertUser(title, body, tag) {
+    const m = alertMode(); if (m === 'off') return;
+    if (m === 'phone' && notifOk()) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.showNotification(title, { body, tag, renotify: true, icon: './icon-192.png', badge: './icon-192.png', vibrate: [200, 100, 200, 100, 300] });
+        return;
+      } catch { }
+    }
+    beep(); buzz();
+  }
+
+  // A new shop starts with the placeholder name "My Shop"; once connected, take the real name from the cloud shop.
+  function adoptShopName() {
+    try {
+      const w = wsNow();
+      if (w && w.name && w.name !== 'My Shop' && typeof db !== 'undefined' && db.shop && db.shop.name === 'My Shop') {
+        db.shop.name = w.name; if (typeof save === 'function') save(); if (typeof render === 'function') render();
+      }
+    } catch { }
+  }
 
   // ---- UI ----------------------------------------------------------------------------------------------------
   const css = document.createElement('style');
@@ -159,13 +228,14 @@
     let bar = $('#subBar');
     const u = unread();
     const warn = r.status === 'grace' || ((r.status === 'trial' || r.status === 'active') && r.days <= REMIND);
-    const show = S.role && (u > 0 || warn || r.status === 'trial');
+    const pend = S.admin ? (S.pending || 0) : 0;
+    const show = S.role && (u > 0 || warn || r.status === 'trial' || pend > 0);
     if (!show) { if (bar) bar.remove(); }
     else {
       if (!bar) { bar = document.createElement('div'); bar.id = 'subBar'; const hd = $('header'); hd ? hd.after(bar) : document.body.prepend(bar); }
-      bar.className = r.status === 'grace' ? 'bad' : warn ? 'warn' : '';
-      bar.innerHTML = '<span>' + esc(describe(r) || 'Messages') + '</span><span><button id="subBell" type="button">🔔' + (u ? ' ' + u : '') + '</button> ' + (r.status === 'trial' || warn ? '<button id="subGo" type="button">' + (r.status === 'trial' ? 'Subscribe' : 'Renew') + '</button>' : '') + '</span>';
-      $('#subBell').onclick = openNotices; const g = $('#subGo'); if (g) g.onclick = openPay;
+      bar.className = r.status === 'grace' ? 'bad' : (warn || pend > 0) ? 'warn' : '';
+      bar.innerHTML = '<span>' + esc(pend > 0 ? pend + ' payment request' + (pend > 1 ? 's' : '') + ' waiting' : (describe(r) || 'Messages')) + '</span><span><button id="subBell" type="button">🔔' + (u ? ' ' + u : '') + '</button> ' + (pend > 0 ? '<button id="subGo" type="button">Review</button>' : (r.status === 'trial' || warn ? '<button id="subGo" type="button">' + (r.status === 'trial' ? 'Subscribe' : 'Renew') + '</button>' : '')) + '</span>';
+      $('#subBell').onclick = openNotices; const g = $('#subGo'); if (g) g.onclick = pend > 0 ? openAdmin : openPay;
     }
     // lock screen
     let lk = $('#subLock');
@@ -188,18 +258,27 @@
     const w = wsNow(); if (!w) return '<span id="subCard" style="display:none"></span>';
     const r = current(); const u = unread();
     let body = '';
-    if (S.admin) body = '<p>You are signed in as the <b>platform admin</b>. Your own shop is free.</p><button class="btn big" id="subAdm" type="button">Open admin screen</button>';
+    if (S.admin) body = '<p>You are signed in as the <b>platform admin</b>. Your own shop is free.</p><button class="btn big" id="subAdm" type="button">Open admin screen' + (S.pending ? ' (' + S.pending + ' waiting)' : '') + '</button>';
     else {
       body = '<p><b>' + esc(describe(r) || 'Checking subscription…') + '</b></p><p class="subSm">' + money(price()) + ' per month</p>' +
         (w.role === 'owner' ? '<button class="btn big" id="subPayBtn" type="button">' + (r.status === 'trial' ? 'Subscribe' : 'Pay / renew') + '</button>' : '<p class="subSm">Only the shop owner can pay.</p>');
     }
-    return '<section class="stat" id="subCard" style="margin-bottom:12px"><h2>⭐ Subscription</h2>' + body + '<button class="btn" id="subMsgBtn" type="button">🔔 Messages' + (u ? ' (' + u + ' new)' : '') + '</button></section>';
+    const perm = (() => { try { return typeof Notification === 'undefined' ? 'none' : Notification.permission; } catch { return 'none'; } })();
+    const mode = alertMode();
+    const alerts = '<label class="subSm" style="display:block;margin-top:10px">Message alerts</label><select id="subAlertMode"><option value="phone"' + (mode === 'phone' ? ' selected' : '') + '>Phone notification (your phone\'s tone and vibration)</option><option value="inapp"' + (mode === 'inapp' ? ' selected' : '') + '>Beep and vibrate inside the app</option><option value="off"' + (mode === 'off' ? ' selected' : '') + '>Off</option></select>' +
+      (perm === 'default' ? '<button class="btn" id="subAllow" type="button">Allow phone notifications</button>' : '') +
+      (perm === 'denied' ? '<p class="subSm">Phone notifications are blocked. Allow them in your browser\'s site settings.</p>' : '') +
+      '<button class="btn" id="subTest" type="button">Test alert</button>';
+    return '<section class="stat" id="subCard" style="margin-bottom:12px"><h2>⭐ Subscription</h2>' + body + '<button class="btn" id="subMsgBtn" type="button">🔔 Messages' + (u ? ' (' + u + ' new)' : '') + '</button>' + alerts + '</section>';
   }
   // The Settings page is rebuilt by the app's own render(), so buttons are handled by one delegated listener.
   document.addEventListener('click', e => {
-    const t = e.target && e.target.closest ? e.target.closest('#subAdm,#subPayBtn,#subMsgBtn') : null; if (!t) return;
-    if (t.id === 'subAdm') openAdmin(); else if (t.id === 'subPayBtn') openPay(); else openNotices();
+    const t = e.target && e.target.closest ? e.target.closest('#subAdm,#subPayBtn,#subMsgBtn,#subAllow,#subTest') : null; if (!t) return;
+    if (t.id === 'subAdm') openAdmin(); else if (t.id === 'subPayBtn') openPay(); else if (t.id === 'subMsgBtn') openNotices();
+    else if (t.id === 'subTest') alertUser('SmartBiz App', 'This is how new messages will alert you.', 'sub-test');
+    else if (t.id === 'subAllow') { try { Notification.requestPermission().then(p => { if (p === 'granted') lsSet(LSA, 'phone'); paint(); }); } catch { } }
   });
+  document.addEventListener('change', e => { if (e.target && e.target.id === 'subAlertMode') { lsSet(LSA, e.target.value); paint(); } });
 
   function overlay(html) {
     let o = $('#subDlg'); if (!o) { o = document.createElement('div'); o.id = 'subDlg'; o.className = 'subOv'; o.style.zIndex = 10000; document.body.appendChild(o); }
@@ -332,5 +411,5 @@
     paint(); check();
     setInterval(paint, 3600000);
   });
-  window.okpotaniSubInternals = { calc, expiryOf, current };
+  window.okpotaniSubInternals = { calc, expiryOf, current, alertMode, alertUser };
 })();
