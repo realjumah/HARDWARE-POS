@@ -17,7 +17,7 @@
 
   // ---- what gets synced -------------------------------------------------------------------------
   // Arrays of records that each have a unique `id`. If you ever add a new array like this to the app, add it here.
-  const COLS=['P','S','U','X','A','C','M','O'];
+  const COLS=['P','S','U','X','A','C','M','O','J'];
   // Per-phone bookkeeping that must NOT be shared between phones.
   const LOCAL_ONLY=['seq','lastBk'];
   // Everything else at the top level of the data (shop, L, staff, PL, mmr, lastSb ...) is synced as one small doc each.
