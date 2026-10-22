@@ -1,7 +1,7 @@
-const CACHE_NAME = 'okpotani-hardware-firebase-v11';
+const CACHE_NAME = 'okpotani-hardware-firebase-v12';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './firebase-config.js', './firebase-bundle.js', './cloud.js', './subscription.js'];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim()));
@@ -10,7 +10,18 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   // Settings file: always try the network first so an edited firebase-config.js is picked up right away.
-  const isConfig = new URL(req.url).pathname.endsWith('/firebase-config.js');
+  // App files that change often (and the page itself): ask the network first and revalidate, so an update appears on the next
+  // open when online. They still work offline from the saved copy. Big static files (firebase-bundle.js, icons) stay cache-first.
+  const path = new URL(req.url).pathname;
+  const isFresh = req.mode === 'navigate' || /(\/|\/index\.html|\/cloud\.js|\/subscription\.js|\/manifest\.webmanifest)$/.test(path);
+  if (isFresh) {
+    event.respondWith(fetch(req, { cache: 'no-cache' }).then(resp => {
+      if (resp && resp.ok && resp.type === 'basic') { const copy = resp.clone(); caches.open(CACHE_NAME).then(c => c.put(req, copy)); }
+      return resp;
+    }).catch(() => caches.match(req).then(c => c || caches.match('./index.html'))));
+    return;
+  }
+  const isConfig = path.endsWith('/firebase-config.js');
   if (isConfig) {
     event.respondWith(fetch(req).then(resp => {
       if (resp && resp.ok) { const copy = resp.clone(); caches.open(CACHE_NAME).then(c => c.put(req, copy)); }
