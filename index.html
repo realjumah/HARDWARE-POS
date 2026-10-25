@@ -56,6 +56,12 @@ main>*{animation:up .22s ease both}#md>div{animation:sl .22s ease}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 #pv{background:#fff;color:#000;border-radius:10px;padding:14px;margin:10px 0}#pv h2,#pv h3,#pv h4{margin:4px 0;color:#000}#pv table{background:#fff;color:#000;font-size:14px}#pv td{white-space:normal;padding:5px 4px;border-bottom:1px solid #ccc}#pv td:last-child{text-align:right;font-weight:700;white-space:nowrap}#pv td:nth-child(2){text-align:left;color:#555}.pcat{break-inside:avoid;margin-bottom:10px}.pcat h4{background:#f28c00;color:#2a1700!important;padding:3px 6px}.chk{display:flex;gap:8px;align-items:center;margin:0 0 6px}.chk input{width:auto;margin:0}
 @media print{body *{visibility:hidden}#rc,#rc *,#gd,#gd *,#pv,#pv *{visibility:visible}#rc,#gd,#pv{position:absolute;left:0;top:0;width:100%}#hb{display:none}html,body{height:auto!important;display:block!important}main{overflow:visible!important;padding:0!important;max-width:none!important}.pc{column-count:2;column-gap:16px}#pv{margin:0;border-radius:0}}
+.fxg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 12px}@media(min-width:760px){.fxg{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.fx{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px 8px 10px;text-align:center;display:flex;flex-direction:column;align-items:center;min-width:0}
+.fx-e{font-size:40px;line-height:1.1}.fx b{font-size:15.5px;margin-top:4px}.fx-d{font-size:12px;color:var(--mut);line-height:1.3;min-height:31px;margin-top:2px}
+.fx-n{font-size:21px;font-weight:800;margin-top:6px;overflow-wrap:anywhere;line-height:1.15}.fx-n small{display:block;font-size:11.5px;font-weight:600}
+.fx-a{display:flex;gap:6px;width:100%;margin-top:auto;padding-top:9px}.fx-a button{flex:1;min-width:0;padding:9px 2px;border-radius:9px;border:1.5px solid var(--line);background:var(--card);font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fx-a button:first-child{background:var(--acc);border-color:var(--acc);color:var(--accink)}.fx-a button:active{transform:scale(.97)}
+nav button .ni{display:block;font-size:20px;line-height:1.15;margin-bottom:1px}
 </style></head><body>
 <header><h1 id="hn">Okpotani General Hardware</h1><small id="ha"></small><button id="installApp" aria-label="Install app" title="Install app" style="position:absolute;right:54px;top:12px;height:34px;padding:0 9px;border:1px solid #f28c00;border-radius:8px;background:transparent;color:inherit;font-size:12px;font-weight:700;display:none" onclick="installOkpotani()">Install</button><button id="hb" aria-label="How to use this system" onclick="go('help')">?</button></header>
 <main id="mn"></main>
@@ -110,8 +116,48 @@ const sowed=u=>u.cr?Math.max(0,u.q*u.c-(u.pays||[]).reduce((x,p)=>x+p.a,0)):0,sk
 const cashOut=(u,m)=>u.cr?(u.date.startsWith(m)?u.q*((u.tr||0)+(u.hd||0))+(u.mm||0)+(u.oth||0):0)+(u.pays||[]).reduce((x,p)=>x+(p.d.startsWith(m)?p.a+(p.f||0):0),0):(u.date.startsWith(m)?u.q*ul(u):0);
 const costNow=p=>{const u=db.U.filter(u=>u.n==p.name).pop();return u?ul(u):p.cost};
 const abal=a=>a.amt-db.S.filter(s=>s.advId==a.id).reduce((x,s)=>x+(s.advA||0),0);
-let st={adv:null,hd:td(),tab:'home',sub:'buy',cart:[],q:'',pq:'',mon:td().slice(0,7)};
-const TABS=[['home','Home'],['sell','Sell'],['stock','Stock'],['money','Money'],['rep','Reports'],['set','Setup']];
+let st={adv:null,hd:td(),tab:'home',sub:'hub',cart:[],q:'',pq:'',mon:td().slice(0,7)};
+const TABS=[['home','🏠','Home'],['sell','🛒','Sell'],['stock','📦','Stock'],['money','💰','Money'],['rep','📊','Reports'],['set','⚙️','Setup']];
+/* feature cards: emoji, title, short text, live count, 1-2 buttons */
+const fxK=(e,t,d,n,l,a)=>'<div class="fx"><span class="fx-e">'+e+'</span><b>'+t+'</b><span class="fx-d">'+d+'</span><span class="fx-n">'+n+(l?'<small>'+l+'</small>':'')+'</span><div class="fx-a">'+a.map(x=>'<button onclick="'+x[1]+'">'+x[0]+'</button>').join('')+'</div></div>';
+function fxC(){const m=stk(),tp=pl(td()),mo=td().slice(0,7),B=a=>a.length,
+low=B(db.P.filter(p=>m[p.name]<=p.re)),
+owes=new Set(db.S.filter(x=>x.pay=='Credit'&&tot(x)-paid(x)>0).map(x=>x.cust||'?')).size,
+ow=k=>B(db.O.filter(o=>o.st==k)),
+hold=B(db.A.filter(a=>abal(a)>0)),
+sup=new Set(db.U.filter(u=>sowed(u)>0).map(sk)).size,
+jb=jbal(),jn=B(Object.keys(jb).filter(k=>jb[k]>0.5)),
+pur=B(db.U.filter(u=>(u.date||'').startsWith(mo))),
+exp=B(db.X.filter(x=>(x.date||'').startsWith(mo))),
+rm=B(db.S.filter(x=>(x.date||'').startsWith(st.mon||mo))),
+bk0=db.lastBk?Math.floor((Date.now()-db.lastBk)/864e5):null;
+return{
+sales:fxK('🛒','Sales','Ring up customers and print receipts',tp.n,'receipts today',[['New sale',"go('sell')"],['Report',"st.rt='d';st.rd=td();nav('rep')"]]),
+stock:fxK('📦','Stock','Products, prices and stock levels',db.P.length,'products',[['Open',"go('stock')"],['+ Add',"go('stock');pform()"]]),
+stockP:fxK('📦','Products','Add and edit what you sell',db.P.length,'products',[['+ Add',"pform()"],['Prices',"nav('price')"]]),
+reorder:fxK('🔔','Reorder','Items at or below their reorder level',low,'to reorder',[['+ Arrival',"uform()"],['Purchases',"nav('money','buy')"]]),
+credit:fxK('💳','Credit','Customers who bought on credit',owes,'customers owe',[['View',"nav('money','cr')"]]),
+orders:fxK('🧾','Orders','Customer orders waiting for goods',ow('w'),'waiting · '+ow('a')+' arrived',[['Open',"nav('money','ord')"],['+ New',"nav('money','ord');oform()"]]),
+journal:fxK('🔩','Bits journal','Nails sold by money amount',jn,'sizes with money kept',[['Open',"nav('money','jn')"],['+ Add',"nav('money','jn');jform()"]]),
+cash:fxK('🏦','Cash book','Daily cash in and out','UGX '+fm(cbexp(td()).c),'expected today',[['Open',"nav('money','cb')"]]),
+buy:fxK('📥','Purchases','Stock arriving from suppliers',pur,'this month',[['Open',"nav('money','buy')"],['+ Arrival',"nav('money','buy');uform()"]]),
+exp:fxK('💸','Expenses','Money spent running the shop',exp,'this month',[['Open',"nav('money','exp')"],['+ Add',"nav('money','exp');xform()"]]),
+adv:fxK('💵','Advances','Deposits held for customers',hold,'held',[['Open',"nav('money','adv')"],['+ New',"nav('money','adv');aform()"]]),
+sup:fxK('🤝','Suppliers','What you still owe suppliers',sup,'to pay',[['View',"nav('money','sup')"]]),
+reports:fxK('📊','Reports','Profit, sales and cash','UGX '+fm(tp.net),'net profit today',[['Daily',"st.rt='d';st.rd=td();nav('rep')"],['Monthly',"st.rt='m';nav('rep')"]]),
+rm:fxK('📅','Monthly','Profit and cash for a month',rm,'receipts this month',[['Open',"st.rt='m';render()"]]),
+rd:fxK('🗓','Daily report','Sales, expenses and cash for a day',tp.n,'receipts today',[['Open',"st.rt='d';st.rd=td();render()"]]),
+price:fxK('🏷','Price list','Share your prices on WhatsApp',B(db.P.filter(p=>p.price>0)),'priced items',[['Open',"nav('price')"]]),
+backup:fxK('💾','Backup','Download a copy of your data',bk0===null?'—':bk0,bk0===null?'not backed up yet':'days since backup',[['Backup now',"bk()"]])}}
+const fxG=a=>'<div class="fxg">'+a.join('')+'</div>';
+function fxMoney(){const C=fxC();return fxG([C.buy,C.exp,C.credit,C.adv,C.sup,C.orders,C.journal,C.cash])}
+function fxPage(t,h){try{const C=fxC(),ins=(a,x)=>h.includes(a)?h.replace(a,x+a):x+h;
+if(t=='home')return ins('<h3>Last 7 days sales</h3>','<h3>Sections</h3>'+fxG([C.sales,C.stock,C.credit,C.orders,C.journal,C.cash,C.exp,C.reports]));
+if(t=='sell')return h+'<h3>Quick links</h3>'+fxG([C.credit,C.adv]);
+if(t=='stock')return fxG([C.stockP,C.reorder])+h;
+if(t=='rep')return fxG([C.rm,C.rd])+h;
+if(t=='set')return ins('<button class="btn big" onclick="go(\'help\')"',fxG([C.backup,C.price,C.orders,C.stock]));
+}catch(e){console.warn('cards skipped',e)}return h}
 function go(t){st.tab=t;render()}
 function modal(h){const m=$('#md');if(!h){m.classList.add('hide');m.innerHTML='';return}m.innerHTML='<div>'+h+'</div>';m.classList.remove('hide')}
 $('#md').onclick=e=>{if(e.target.id=='md')modal()};
@@ -121,8 +167,8 @@ $('#fs').onclick=()=>{const r={};F.forEach(([k,,t])=>{const x=$('#f_'+k).value;r
 if(del)$('#fd').onclick=()=>{if(confirm('Delete this record?')){del();save();modal();render();toast('Deleted')}}}
 function render(){
 $('#hn').textContent=db.shop.name;$('#ha').textContent=db.shop.addr+(db.shop.tel?' · '+db.shop.tel:'')+(lastSave?' · saved '+lastSave:'');
-$('#nv').innerHTML=TABS.map(([k,l])=>'<button class="'+(st.tab==k?'on':'')+'" onclick="go(\''+k+'\')">'+l+'</button>').join('');
-$('#mn').innerHTML=V[st.tab]();if(st.tab=='sell')plist();if(st.tab=='stock')slist()}
+$('#nv').innerHTML=TABS.map(([k,e,l])=>'<button class="'+(st.tab==k?'on':'')+'" onclick="go(\''+k+'\')"><span class="ni">'+e+'</span>'+l+'</button>').join('');
+$('#mn').innerHTML=fxPage(st.tab,V[st.tab]());if(st.tab=='sell')plist();if(st.tab=='stock')slist()}
 const sum=(a,f)=>a.reduce((x,y)=>x+f(y),0);
 function pl(day){const ss=db.S.filter(s=>s.date==day),t=sum(ss,tot),c=sum(ss,cogs),e=sum(db.X.filter(x=>x.date==day),x=>x.amt);return{n:ss.length,t,c,g:t-c,e,net:t-c-e}}
 const OS=['Waiting for goods','Arrived – call customer','Collected','Cancelled'],OK=['w','a','d','x'];
@@ -141,9 +187,10 @@ sell(){const c=st.cart,T=sum(c,i=>i.q*i.p),ad=st.adv&&db.A.find(x=>x.id==st.adv)
 return(ad?'<div class="stat wide" style="margin-bottom:10px"><small>Advance from '+esc(ad.cust)+(ad.desc?' – '+esc(ad.desc):'')+'</small><span class="num">UGX '+fm(abal(ad))+' will be deducted</span><a href="#" onclick="st.adv=null;render();return false" style="color:#ffb866">cancel</a></div>':'')+'<input id="sq" placeholder="Search product to add…" value="'+esc(st.q)+'" oninput="st.q=this.value;plist()"><div id="pl"></div><h3>Cart</h3>'+(c.map((i,x)=>'<div class="item" style="cursor:default"><span class="nm"><b>'+esc(i.n)+'</b><div class="qty"><input type="number" step="any" value="'+i.q+'" onchange="st.cart['+x+'].q=+this.value;render()" aria-label="Quantity"><input type="number" value="'+i.p+'" onchange="st.cart['+x+'].p=+this.value;render()" aria-label="Price"></div></span><span class="pr">'+fm(i.q*i.p)+'<br><a href="#" onclick="st.cart.splice('+x+',1);render();return false" class="low">remove</a></span></div>').join('')||'<div class="empty">Tap a product above to add it</div>')+(c.length?'<div class="stat wide"><small>Total</small><span class="num">UGX '+fm(T)+'</span></div><label>Customer</label><input id="cu" value="'+esc(ad?ad.cust:'')+'" placeholder="Customer name (required for credit)">'+sbx()+'<label>Payment</label><select id="pm" onchange="pmc(this)"><option>Cash</option><option>Mobile Money</option><option>Credit</option></select><div id="pnw" class="hide"><label>Amount paid now (UGX) – leave empty if nothing paid yet</label><input id="pn" type="number" inputmode="numeric" placeholder="0"></div><label>Date</label><input id="sd" type="date" value="'+td()+'"><label>Time (leave empty to use the time you tap Complete sale)</label><input id="stm" type="time"><button class="btn big" onclick="done()">Complete sale</button>':'')+'<h3>Sales history</h3><label>Show sales for date (tap a sale to view or delete it)</label><input type="date" value="'+st.hd+'" onchange="st.hd=this.value||td();render()">'+(db.S.filter(s=>s.date==st.hd).reverse().map(s=>'<div class="item" onclick="rcpt('+s.id+')"><span class="nm"><b>#'+s.no+' '+esc(s.cust||'Walk-in')+'</b><small>'+s.items.map(i=>esc(i.n)+' ×'+i.q).join(', ')+' · '+s.pay+(s.time?' · '+s.time:'')+(s.by?' · '+esc(s.by):'')+'</small></span><span class="pr">'+fm(tot(s))+'</span></div>').join('')||'<div class="empty">No sales on this date</div>')},
 stock(){const m=stk(),val=sum(db.P,p=>Math.max(m[p.name],0)*costNow(p)),sv=sum(db.P,p=>Math.max(m[p.name],0)*p.price);
 return'<div class="cards"><div class="stat"><small>Products</small><span class="num">'+db.P.length+'</span></div><div class="stat"><small>Stock value (cost)</small><span class="num">'+fm(val)+'</span></div><div class="stat"><small>Stock value (selling)</small><span class="num">'+fm(sv)+'</span></div><div class="stat"><small>Potential gross profit</small><span class="num ok">'+fm(sv-val)+'</span></div></div><input placeholder="Search products…" value="'+esc(st.pq)+'" oninput="st.pq=this.value;slist()"><button class="btn big" onclick="pform()" style="margin:0 0 10px">+ Add product</button><button class="btn" onclick="nav(\'price\')" style="margin:0 0 10px">🏷 Make price list</button><div id="sl"></div>'},
-money(){const s=st.sub,seg='<div class="seg">'+[['buy','Purchases'],['exp','Expenses'],['cr','Credit'],['adv','Advances'],['sup','Suppliers'],['ord','Orders'],['jn','Journal'],['cb','Cash book']].map(([k,l])=>'<button class="'+(s==k?'on':'')+'" onclick="st.sub=\''+k+'\';render()">'+l+'</button>').join('')+'</div>';
+money(){const s=st.sub,seg='<div class="seg">'+[['hub','🗂 Overview'],['buy','📥 Purchases'],['exp','💸 Expenses'],['cr','💳 Credit'],['adv','💵 Advances'],['sup','🤝 Suppliers'],['ord','🧾 Orders'],['jn','🔩 Journal'],['cb','🏦 Cash book']].map(([k,l])=>'<button class="'+(s==k?'on':'')+'" onclick="st.sub=\''+k+'\';render()">'+l+'</button>').join('')+'</div>';
 if(s=='buy')return seg+'<button class="btn big" onclick="uform()" style="margin:0 0 10px">+ Record stock arriving</button>'+db.U.slice().reverse().slice(0,60).map(u=>'<button class="item" onclick="uform('+u.id+')"><span class="nm"><b>'+esc(u.n)+'</b><small>'+u.date+' · '+esc(u.sup)+' · '+u.q+' @ '+fm(u.c)+(ul(u)>u.c?' + '+fm(ul(u)-u.c)+' costs = '+fm(ul(u))+'/unit':'')+'</small></span><span class="pr">'+fm(u.q*ul(u))+(sowed(u)>0?'<br><small class="low">owe '+fm(sowed(u))+'</small>':'')+'</span></button>').join('');
 if(s=='exp')return seg+'<button class="btn big" onclick="xform()" style="margin:0 0 10px">+ Add expense</button>'+db.X.slice().reverse().slice(0,60).map(x=>'<button class="item" onclick="xform('+x.id+')"><span class="nm"><b>'+esc(x.desc||x.type)+'</b><small>'+x.date+' · '+esc(x.type)+'</small></span><span class="pr">'+fm(x.amt)+'</span></button>').join('');
+if(s=='hub')return seg+fxMoney();
 if(s=='jn')return seg+jview();
 if(s=='cb')return seg+cbv();
 if(s=='ord'){const f=st.of||'w',L=db.O.filter(o=>o.st==f).reverse(),n=k=>db.O.filter(o=>o.st==k).length,T=[['w','Waiting ('+n('w')+')'],['a','Arrived ('+n('a')+')'],['d','Done ('+(n('d')+n('x'))+')']];
@@ -153,7 +200,7 @@ if(s=='sup'){const g={};db.U.forEach(u=>{if(sowed(u)>0)(g[sk(u)]=g[sk(u)]||[]).p
 if(s=='adv'){const L=db.A.slice().reverse();return seg+'<div class="stat wide"><small>Held for customers (not yet sales)</small><span class="num">UGX '+fm(sum(db.A,abal))+'</span></div><button class="btn big" onclick="aform()" style="margin:0 0 10px">+ New customer advance</button>'+(L.map(a=>'<button class="item" onclick="aopen('+a.id+')"><span class="nm"><b>'+esc(a.cust)+'</b><small>'+a.date+' · '+esc(a.desc||'')+'</small></span><span class="pr '+(abal(a)>0?'ok':'')+'">'+fm(abal(a))+'<br><small>'+(abal(a)>0?'held':'used')+'</small></span></button>').join('')||'<div class="empty">No advances recorded</div>')}
 const cr=db.S.filter(x=>x.pay=='Credit'),o=cr.filter(x=>tot(x)-paid(x)>0);
 return seg+'<div class="stat wide"><small>Total owed</small><span class="num">UGX '+fm(sum(o,x=>tot(x)-paid(x)))+'</span></div>'+(o.map(x=>'<button class="item" onclick="cform('+x.id+')"><span class="nm"><b>'+esc(x.cust)+'</b><small>#'+x.no+' · '+x.date+' · total '+fm(tot(x))+'</small></span><span class="pr low">'+fm(tot(x)-paid(x))+'</span></button>').join('')||'<div class="empty">No outstanding credit</div>')},
-rep(){return'<div class="seg"><button class="'+(st.rt!='d'?'on':'')+'" onclick="st.rt=\'m\';render()">Monthly</button><button class="'+(st.rt=='d'?'on':'')+'" onclick="st.rt=\'d\';render()">Daily report</button></div>'+(st.rt=='d'?drep():V.mrep())},
+rep(){return'<div class="seg"><button class="'+(st.rt!='d'?'on':'')+'" onclick="st.rt=\'m\';render()">📅 Monthly</button><button class="'+(st.rt=='d'?'on':'')+'" onclick="st.rt=\'d\';render()">🗓 Daily report</button></div>'+(st.rt=='d'?drep():V.mrep())},
 mrep(){const m=st.mon,ss=db.S.filter(s=>s.date.startsWith(m)),t=sum(ss,tot),c=sum(ss,cogs),e=sum(db.X.filter(x=>x.date.startsWith(m)),x=>x.amt),by=p=>sum(ss.filter(s=>s.pay==p),tot);
 const days=[...new Set([...ss.map(s=>s.date),...db.X.filter(x=>x.date.startsWith(m)).map(x=>x.date)])].sort(),pp={};
 ss.forEach(s=>s.items.forEach(i=>{const r=pp[i.n]||(pp[i.n]={q:0,s:0,c:0});r.q+=i.q;r.s+=i.q*i.p;r.c+=i.q*i.c}));
