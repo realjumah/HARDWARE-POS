@@ -76,7 +76,7 @@ DATA SAFETY
 - The old Supabase project still holds a copy of your data until you delete or pause it. Once Firebase works, delete it from
   the Supabase dashboard, and remove cloud-config.js from GitHub (it contained the Supabase URL and key).
 
-FILES
+FILES (see also pdf.js and finder.js, added later)
 index.html            Main business app
 cloud.js              Sign-in and shared-shop sync (Firebase)
 firebase-bundle.js    The Firebase code (Auth + Firestore), bundled so it works offline
@@ -92,3 +92,16 @@ TROUBLESHOOTING
 - Sign-in works but nothing syncs: confirm step 3 (authorized domain) and step 5 (rules published).
 - "Invite code not found": ask the owner for the current code (it changes when they make a new one).
 - Records look out of date on one phone: Cloud & team settings -> Sync now, or "Download whole shop again".
+
+========================================================================
+NEW: PDF SHARING, SEARCH AND FILTERS
+========================================================================
+- Every receipt now has "Share receipt as PDF" and "Download receipt PDF" (A5 page, or a narrow 58mm roll if that paper is chosen).
+- Reports page: the Daily summary table now lists the LATEST date first. Daily and monthly reports can be shared/downloaded as PDF.
+- Setup page: "Download backup as PDF" / "Share backup PDF" (readable report plus a hidden full copy of your data), and
+  "Whole business report (PDF)" with an optional date range. Restore accepts the .json file OR the backup PDF.
+  Keep the .json backup too; the PDF backup restores only if the file is not edited or re-saved by another PDF program.
+- Search: the round magnifier button opens "Search everything" (receipts, products, customers/suppliers, purchases, expenses, ...),
+  with area chips and a date range. Long list pages also get a filter bar (text + calendar button for dates).
+  While a filter is on, lists show ALL records, not just the latest 60/80.
+- New files to upload to GitHub: pdf.js and finder.js (plus the updated index.html, sw.js and, for the agro app, agro.js).
