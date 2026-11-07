@@ -208,3 +208,12 @@ details[open] summary{color:var(--acc)}
 
 /* ---------- Printing keeps receipts and reports as they were ---------- */
 @media print{header,nav{display:none!important}}
+
+/* ---------- Price check box (Home) ---------- */
+.pcb{background:var(--card);border-radius:var(--r-lg);padding:12px 14px 6px;margin:0 0 14px;box-shadow:var(--shadow1)}
+.pcb label{margin:0 0 6px;font-size:.8rem;color:var(--acc)}
+.pcb input{margin:0 0 8px}
+.pcr{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 4px;border-top:1px solid var(--line)}
+.pcr b{display:block;font-size:.97rem}
+.pcp{text-align:right;font-size:1.4rem;font-weight:800;color:var(--acc);letter-spacing:-.01em;white-space:nowrap}
+.pcp small{display:block;font-size:.7rem;font-weight:500;color:var(--mut)}

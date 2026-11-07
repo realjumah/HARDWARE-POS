@@ -199,5 +199,9 @@ function monthReport(share){const m=st.mon;return run('monthly report',async()=>
  const g={};xs.forEach(x=>{g[x.type||'Other']=(g[x.type||'Other']||0)+x.amt});d.h2('Expenses by type');d.table([{h:'Type',w:.7},{h:'Amount',w:.3,a:'r'}],Object.entries(g).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,R(v)]),{empty:'No expenses this month.'});
  secBuy(d,us);await out(d.finish(null,{title:'Monthly report '+m,author:db.shop.name}),slug()+'-monthly-'+m+'.pdf',share)})}
 
-window.X=Object.assign(window.X||{},{receipt,report,reportGo,backup,pdfJson,dayReport,monthReport,_Doc:Doc});
+function planPdf(p,share){return run('restock plan',async()=>{const logo=await logoJpeg(),d=newA4('Restock plan');letter(d,logo,'Restock plan','Made '+nowS()+' · based on your sales of the last '+p.eff+' days');
+ d.grid([['Budget',p.budget],['Planned spending',p.spent],['Unspent',p.left]],3);d.h2('What to buy');
+ d.table([{h:'Product',w:.34},{h:'In stock',w:.1,a:'r'},{h:'Sold '+p.eff+'d',w:.1,a:'r'},{h:'Buy',w:.1,a:'r'},{h:'Unit cost',w:.16,a:'r'},{h:'Cost',w:.2,a:'r'}],p.rows.map(r=>[r.n,String(r.stock),String(r.sold),String(r.qty),R(r.c),R(r.cost)]),{empty:'Nothing to buy.'});
+ await out(d.finish(null,{title:'Restock plan',author:db.shop.name}),slug()+'-restock-plan-'+td()+'.pdf',share)})}
+window.X=Object.assign(window.X||{},{receipt,report,reportGo,backup,pdfJson,dayReport,monthReport,planPdf,_Doc:Doc});
 })();

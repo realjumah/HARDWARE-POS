@@ -13,7 +13,7 @@ const hit=(t,w)=>w.every(k=>new RegExp('(^|[^a-z0-9])'+k.replace(/[.*+?^${}()|[\
 /* ---------- 1) filter bar on list pages ---------- */
 window.XF=window.XF||{k:'',q:'',from:'',to:'',on:false,dates:false};
 window.xLim=n=>window.XF&&window.XF.on?1e9:n;   // lists that normally show only the latest 60/80 show everything while filtering
-const SKIP=['home','sell','stock','set','help','guide'];
+const SKIP=['home','sell','stock','set','help','guide','ai'];
 function key(){return [st.tab,st.sub,st.fs,st.ms,st.rt,st.mon,st.of,st.dlf].join('|')}
 function units(){const mn=document.getElementById('mn');if(!mn)return[];const a=[...mn.querySelectorAll('.item')].filter(e=>!e.closest('#xf'));
  mn.querySelectorAll('table').forEach(t=>t.querySelectorAll('tr').forEach(r=>{if(r.querySelector('td'))a.push(r)}));return a}
@@ -53,6 +53,11 @@ function corpus(){const C=[],has=Array.isArray(db.FM),ag=window.ag||{};
  db.U.forEach(u=>add('Purchases',u.date,u.n+(u.sup?' · '+u.sup:''),u.date+' · '+u.q+' @ '+fm(ul(u)),fm(u.q*ul(u)),u.sup||'',()=>uform(u.id)));
  db.X.forEach(x=>add('Expenses',x.date,(x.desc||x.type||'Expense'),x.date+' · '+(x.type||''),fm(x.amt),x.type||'',()=>xform(x.id)));
  db.A.forEach(a=>add('Advances',a.date,a.cust+(a.desc?' – '+a.desc:''),a.date+' · advance',fm(a.amt),'',()=>aform(a.id)));
+ if(typeof KL!='undefined')(db.M||[]).forEach(m=>{const lab=KL[KK.indexOf(m.kind)]||'Owner entry';add('Owner drawings & transfers',m.date,lab+(m.desc?' – '+m.desc:''),m.date+' · '+(m.acct||'')+(m.desc?' · '+m.desc:''),fm(m.amt),(m.desc||'')+' '+(m.acct||'')+' '+m.amt,()=>mform(m.id))});
+ (db.J||[]).forEach(e=>{const note=e.kind=='note',out=e.kind=='out';add('Journal',e.date,note?'📝 '+(e.ref||e.cat||'Note'):(e.n||'Journal'),e.date+' · '+(note?((e.cat&&e.cat!='Note only'?e.cat+' · ':'')+(e.text||'')):out?'moved to sales':'bits sale'+(e.cust?' · '+e.cust:'')),e.amt?fm(e.amt):'',(e.note||'')+' '+(e.text||'')+' '+(e.cust||'')+' '+(e.ref||'')+' '+(e.cat||'')+' '+(e.pay||'')+' '+(e.amt||''),()=>out?jdelout(e.id):note?jnote(e.id):jform(e.id))});
+ (db.C||[]).forEach(c=>add('Cash book',c.date,'Cash closing '+c.date,'counted '+fm(c.cc)+(c.note?' · '+c.note:''),fm(c.cc),(c.note||'')+' '+c.cc,()=>{st.cd=c.date;nav('money','cb')}));
+ db.S.forEach(s=>(s.pays||[]).forEach(p=>add('Payments',p.d,'Payment from '+(s.cust||'customer'),p.d+' · receipt #'+s.no,fm(p.a),(p.note||'')+' '+p.a,()=>rcpt(s.id))));
+ db.U.forEach(u=>(u.pays||[]).forEach(p=>add('Payments',p.d,'Payment to '+(u.sup||'supplier'),p.d+' · '+u.n,fm(p.a),String(p.a),()=>uform(u.id))));
  (db.O||[]).forEach(o=>add('Pre-orders',o.date,(o.cust||'')+' · '+(o.item||''),o.date+' · '+(o.tel||''),'',o.note||'',()=>oform(o.id)));
  if(has){
   db.FM.forEach(f=>add('Farmers',f.since,f.name,[f.village,f.crops,f.tel].filter(Boolean).join(' · '),'',(f.grp||'')+' '+(f.sub||'')+' '+(f.dist||'')+' '+(f.note||'')+' '+(f.ani||''),()=>ag.fopen(f.id)));
@@ -77,7 +82,7 @@ function results(){const C=corpus(),w=words(G.q);G.res=[];
  if(!w.length&&!G.from&&!G.to)return{h:'<div class="empty">Type a name, product, receipt number, phone, crop or village.<br><small>Use the chips to search one area only, or pick dates.</small></div>',C};
  return{h:n?h:'<div class="empty">Nothing found</div>',C}}
 X.gs=function(keep){if(!keep&&!G.q)G.scope='all';const C=corpus(),chips=scopes(C).map(([k,l])=>'<button data-sc="'+esc2(k)+'" class="'+(G.scope==k?'on':'')+'">'+esc2(l)+'</button>').join('');
- modal('<h2>🔍 Search everything</h2><input id="gsq" type="search" placeholder="Name, product, receipt no., phone…" autocomplete="off" value="'+esc2(G.q)+'"><div class="seg" id="gsc" style="flex-wrap:nowrap;overflow-x:auto">'+chips+'</div><div style="display:flex;gap:6px"><div style="flex:1"><label>From date</label><input id="gsf" type="date" value="'+G.from+'"></div><div style="flex:1"><label>To date</label><input id="gst" type="date" value="'+G.to+'"></div></div><div id="gsr"></div><button class="btn" onclick="modal()">Close</button>');
+ modal('<h2>🔍 Search everything</h2><input id="gsq" type="search" placeholder="Name, product, receipt no., phone, note…" autocomplete="off" value="'+esc2(G.q)+'"><div class="seg" id="gsc" style="flex-wrap:nowrap;overflow-x:auto">'+chips+'</div><div style="display:flex;gap:6px"><div style="flex:1"><label>From date</label><input id="gsf" type="date" value="'+G.from+'"></div><div style="flex:1"><label>To date</label><input id="gst" type="date" value="'+G.to+'"></div></div><div id="gsr"></div><button class="btn" onclick="modal()">Close</button>');
  const q=document.getElementById('gsq'),r=document.getElementById('gsr');
  const draw=()=>{r.innerHTML=results().h;document.querySelectorAll('#gsc button').forEach(b=>b.classList.toggle('on',b.dataset.sc==G.scope))};
  q.oninput=()=>{G.q=q.value;draw()};document.getElementById('gsf').onchange=e=>{G.from=e.target.value;draw()};document.getElementById('gst').onchange=e=>{G.to=e.target.value;draw()};
