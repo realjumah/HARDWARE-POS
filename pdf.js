@@ -116,8 +116,8 @@ function rcBuild(d,s,logo,th){const T=d.T,sh=db.shop,h=shp(),cw=d.cw,sz=th?8:9.5
  else d.table([{h:'Item',w:.5},{h:'Qty',w:.12,a:'r'},{h:'Price',w:.19,a:'r'},{h:'Total',w:.19,a:'r'}],s.items.map(i=>[i.n,String(i.q),R(i.p),R(i.q*i.p)]),{size:9});
  if(typeof agUseText=='function'){const u=agUseText(s);if(u){d.y-=2;d.para(u,{size:th?6.5:7.5,col:T.mut,gap:3})}}
  d.y-=2;if(th)d.dash(d.y);else d.line(d.m,d.y,d.m+cw,d.y,T.line,0.6);d.y-=2;
- kv('TOTAL','UGX '+R(tot(s)),1,th?10:12);if(s.advA)kv('Advance used','-'+R(s.advA));if(s.advA&&s.pay!='Credit')kv('Paid now ('+s.pay+')',R(tot(s)-s.advA));kv('Paid by',s.pay);
- if(s.pay=='Credit'){kv('Paid so far',R(paid(s)));kv('BALANCE',R(tot(s)-paid(s)),1,th?9:11)}
+ kv('TOTAL','UGX '+R(tot(s)),1,th?10:12);if(rtsv(s)>0)kv('Returns','-'+R(rtsv(s)));if(s.advA)kv(s.xrid?'Exchange credit':'Advance used','-'+R(s.advA));if(s.advA&&s.pay!='Credit')kv('Paid now ('+s.pay+')',R(tot(s)-s.advA));kv('Paid by',s.pay);
+ if(s.pay=='Credit'){kv('Paid so far',R(paid(s)-rdec(s)));kv('BALANCE',R(tot(s)-paid(s)),1,th?9:11)}
  d.y-=4;if(th)d.dash(d.y);else d.line(d.m,d.y,d.m+cw,d.y,T.line,0.6);d.y-=6;
  const ab=th?h.about58:h.about;if(ab)d.para(ab,{size:th?7:8,a:'c',col:T.mut,gap:3});if(h.foot)ctr(h.foot,th?8:9.5,1,T.head)}
 async function receipt(id,share){const s=db.S.find(x=>x.id==id);if(!s)return;
@@ -125,18 +125,47 @@ async function receipt(id,share){const s=db.S.find(x=>x.id==id);if(!s)return;
   let d=new Doc(o);rcBuild(d,s,logo,th);if(th){const H=Math.ceil(d.used()+10);d=new Doc(Object.assign({},o,{h:H}));rcBuild(d,s,logo,th)}
   await out(d.finish(null,{title:'Receipt #'+s.no,author:db.shop.name}),'receipt-'+s.no+'-'+s.date+'.pdf',share)})}
 
+/* ---------- RETURN / REFUND RECEIPT ---------- */
+function rtBuild(d,r,logo,th){const T=d.T,sh=db.shop,h=shp(),cw=d.cw,sz=th?8:9.5,s=db.S.find(x=>x.id==r.sid),xs=r.xid?db.S.find(x=>x.id==r.xid):null;
+ const ctr=(t,z,b,col,gap)=>{d.para(t,{size:z,bold:b,a:'c',col:col,gap:gap==null?1:gap})};
+ if(logo){const lh=th?(logo.full?40:46):(logo.full?56:60),lw=Math.min(cw*(logo.full?0.8:0.5),lh*logo.w/logo.h),hh=lw/(logo.w/logo.h);d.need(hh+6);d.img(logo,d.m+(cw-lw)/2,d.y-hh,lw,hh);d.y-=hh+6}
+ if(!(logo&&logo.full))ctr(sh.name||'',th?11:16,1,T.head,1);
+ if(h.tag&&!(logo&&logo.full))ctr(h.tag,th?7:8.5,0,T.mut);
+ if(sh.addr)ctr(sh.addr,th?7.5:9,0);if(sh.tel)ctr('Tel: '+sh.tel,th?7.5:9,0);if(sh.reg)ctr('Licence: '+sh.reg,th?7.5:9,0);if(sh.tin)ctr('TIN: '+sh.tin,th?7.5:9,0);
+ d.y-=3;if(th)d.dash(d.y);else d.line(d.m,d.y,d.m+cw,d.y,T.acc,1.4);d.y-=3;ctr('RETURN / REFUND',th?10:13,1,T.head,3);
+ const kv=(a,b,bold,z)=>{z=z||sz;d.need(z*1.5);d.y-=z*1.35;d.text(a,d.m,d.y+z*0.25,z,bold,T.mut);const t=String(b),x=d.m+cw-tw(t,z,bold);d.text(t,Math.max(x,d.m+tw(a,z,bold)+6),d.y+z*0.25,z,bold)};
+ const rule=()=>{d.y-=4;if(th)d.dash(d.y);else d.line(d.m,d.y,d.m+cw,d.y,T.line,0.6);d.y-=4};
+ if(r.rev)ctr('*** REVERSED ('+r.rev.date+') ***',th?9:11,1,T.head,3);
+ kv('Return no.','R-'+r.no,1);kv('Receipt no.','#'+r.sno);kv('Date',r.date+(r.time?'  '+r.time:''));kv('Customer',r.cust||'Walk-in');if(r.by)kv('Served by',r.by);kv('Reason',r.reason+(r.note?' - '+r.note:''));
+ rule();
+ const st=i=>i.back?'back to stock':'damaged';
+ if(th){r.items.forEach(i=>{d.para(i.n+' ('+st(i)+')',{size:8,bold:1,gap:0});kv(i.q+' x '+R(i.p),R(i.q*i.p),0,8)})}
+ else d.table([{h:'Item',w:.5},{h:'Qty',w:.12,a:'r'},{h:'Price',w:.19,a:'r'},{h:'Total',w:.19,a:'r'}],r.items.map(i=>[i.n+' ('+st(i)+')',String(i.q),R(i.p),R(i.q*i.p)]),{size:9});
+ d.y-=2;if(th)d.dash(d.y);else d.line(d.m,d.y,d.m+cw,d.y,T.line,0.6);d.y-=2;
+ kv(th?'TOTAL':'TOTAL RETURNED','UGX '+R(r.val),1,th?10:12);
+ if(r.dec>0)kv('Taken off balance owed',R(r.dec));if(r.cash>0)kv('Refunded in cash',R(r.cash));if(r.momo>0)kv('Refunded by Mobile Money',R(r.momo));if(r.exch>0)kv('Exchange credit',R(r.exch));
+ if(xs){rule();d.para('Exchange - receipt #'+xs.no,{size:sz,bold:1,gap:1});xs.items.forEach(i=>kv(i.n+' '+i.q+' x '+R(i.p),R(i.q*i.p),0,th?8:sz));kv('Exchange total',R(tot(xs)),1);if(xs.advA)kv('Return credit used','-'+R(xs.advA));kv('Customer pays ('+xs.pay+')',R(tot(xs)-(xs.advA||0)),1)}
+ if(r.cust&&window.okpCr&&((s&&s.pay=='Credit')||(xs&&xs.pay=='Credit')))kv('ACCOUNT BALANCE',R(okpCr.bal(r.cust)),1,th?9:11);
+ d.y-=4;if(th)d.dash(d.y);else d.line(d.m,d.y,d.m+cw,d.y,T.line,0.6);d.y-=6;
+ if(h.foot)ctr(h.foot,th?8:9.5,1,T.head)}
+async function returnReceipt(id,share){const r=(db.R||[]).find(x=>x.id==id);if(!r)return;
+ await run('return receipt PDF',async()=>{const th=shp().paper=='58',logo=await logoJpeg(),o=th?{w:164.4,h:6000,m:9,footer:false}:{w:419.53,h:595.28,m:30,foot:(db.shop.name||'')+'  ·  Return R-'+r.no};
+  let d=new Doc(o);rtBuild(d,r,logo,th);if(th){const H=Math.ceil(d.used()+10);d=new Doc(Object.assign({},o,{h:H}));rtBuild(d,r,logo,th)}
+  await out(d.finish(null,{title:'Return R-'+r.no,author:db.shop.name}),'return-'+r.no+'-'+r.date+'.pdf',share)})}
+
 /* ---------- report sections ---------- */
 const svc=p=>typeof isSvc=='function'&&isSvc(p);
 const byD=(a,b)=>(a.date+(a.time||''))<(b.date+(b.time||''))?1:(a.date+(a.time||''))>(b.date+(b.time||''))?-1:((b.no||b.id||0)-(a.no||a.id||0));
 const inR=(d,f,t)=>(!f||d>=f)&&(!t||d<=t);
 const itemsTxt=s=>s.items.map(i=>i.n+' x'+i.q).join(', ');
-function secSummary(d,ss,xs,label){const t=sum(ss,tot),c=sum(ss,cogs),e=sum(xs,x=>x.amt),by=p=>sum(ss.filter(s=>s.pay==p),tot);
- d.h2('Summary · '+label);d.grid([['Total sales',t],['Cost of goods sold',c],['Gross profit',t-c],['Expenses',e],['Net profit',t-c-e],['Receipts',String(ss.length)],['Cash sales',by('Cash')],['Mobile Money sales',by('Mobile Money')],['Credit sales',by('Credit')]],3)}
+function secSummary(d,ss,xs,label,rs){rs=rs||[];const t=sum(ss,tot)-sum(rs,rtv),c=sum(ss,cogs)-sum(rs,rtc),e=sum(xs,x=>x.amt),by=p=>sum(ss.filter(s=>s.pay==p),tot);
+ d.h2('Summary · '+label);d.grid([[rs.length?'Sales after returns':'Total sales',t],['Cost of goods sold',c],['Gross profit',t-c],['Expenses',e],['Net profit',t-c-e],['Receipts',String(ss.length)],['Cash sales',by('Cash')],['Mobile Money sales',by('Mobile Money')],['Credit sales',by('Credit')]].concat(rs.length?[['Returns & refunds',sum(rs,rtv)],['Refunded cash / MoMo',sum(rs,r=>(r.cash||0)+(r.momo||0))],['Returns',String(rs.length)]]:[]),3)}
 function secDaily(d,dates){d.h2('Daily summary · latest date first');d.table([{h:'Date',w:.2},{h:'Receipts',w:.12,a:'r'},{h:'Sales',w:.2,a:'r'},{h:'Gross profit',w:.18,a:'r'},{h:'Expenses',w:.15,a:'r'},{h:'Net',w:.15,a:'r',bad:1}],dates.map(x=>{const p=pl(x);return[x,String(p.n),R(p.t),R(p.g),R(p.e),R(p.net)]}),{size:8.5})}
-function secProducts(d,ss){const pp={};ss.forEach(s=>s.items.forEach(i=>{const r=pp[i.n]||(pp[i.n]={q:0,s:0,c:0});r.q+=i.q;r.s+=i.q*i.p;r.c+=i.q*i.c}));
+function secProducts(d,ss,rs){const pp={};ss.forEach(s=>s.items.forEach(i=>{const r=pp[i.n]||(pp[i.n]={q:0,s:0,c:0});r.q+=i.q;r.s+=i.q*i.p;r.c+=i.q*i.c}));(rs||[]).forEach(z=>z.items.forEach(i=>{const r=pp[i.n]||(pp[i.n]={q:0,s:0,c:0});r.q-=i.q;r.s-=i.q*i.p;r.c-=i.back?i.q*i.c:0}));
  const rows=Object.entries(pp).sort((a,b)=>(b[1].s-b[1].c)-(a[1].s-a[1].c)).map(([n,r])=>[n,String(Math.round(r.q*100)/100),R(r.s),R(r.s-r.c),r.s?Math.round((r.s-r.c)/r.s*100)+'%':'–']);
  d.h2('Products sold · profit by product');d.table([{h:'Product',w:.4},{h:'Qty',w:.1,a:'r'},{h:'Sales',w:.19,a:'r'},{h:'Profit',w:.19,a:'r',bad:1},{h:'Margin',w:.12,a:'r'}],rows,{empty:'No sales in this period.'})}
 function secSales(d,ss,title){d.h2(title||'Sales (receipts) · latest first');d.table([{h:'Date',w:.14},{h:'No.',w:.08},{h:'Customer',w:.17},{h:'Items',w:.34},{h:'Paid by',w:.1},{h:'Total',w:.17,a:'r'}],ss.slice().sort(byD).map(s=>[s.date+(s.time?' '+s.time:''),'#'+s.no,s.cust||'Walk-in',itemsTxt(s),s.pay,R(tot(s))]),{size:7.5,maxLines:4,empty:'No sales in this period.'})}
+function secReturns(d,rs,title){if(!rs||!rs.length)return;d.h2(title||'Returns & refunds');const L=rs.slice().sort(byD);d.table([{h:'Date',w:.14},{h:'No.',w:.08},{h:'Receipt',w:.09},{h:'Customer',w:.15},{h:'Items',w:.27},{h:'Refund',w:.13},{h:'Value',w:.14,a:'r'}],L.map(r=>[r.date+(r.time?' '+r.time:''),'R-'+r.no,'#'+r.sno,r.cust||'Walk-in',r.items.map(i=>i.n+' x'+i.q+(i.back?'':' (damaged)')).join(', ')+(r.reason?' · '+r.reason:''),rthow(r),R(r.val)]).concat([{b:1,c:['','','','','Total','',R(sum(L,rtv))]}]),{size:7.5,maxLines:4})}
 function secBuy(d,us,title){d.h2(title||'Stock bought (purchases) · latest first');const L=us.slice().sort(byD);d.table([{h:'Date',w:.13},{h:'Supplier',w:.2},{h:'Product',w:.3},{h:'Qty',w:.08,a:'r'},{h:'Unit cost',w:.14,a:'r'},{h:'Total',w:.15,a:'r'}],L.map(u=>[u.date,u.sup||'',u.n,String(u.q),R(ul(u)),R(u.q*ul(u))]).concat(L.length?[{b:1,c:['','','Total','','',R(sum(L,u=>u.q*ul(u)))]}]:[]),{size:7.5,empty:'No purchases in this period.'})}
 function secExp(d,xs,title){d.h2(title||'Expenses · latest first');const L=xs.slice().sort(byD);d.table([{h:'Date',w:.15},{h:'Type',w:.25},{h:'Description',w:.4},{h:'Amount',w:.2,a:'r'}],L.map(x=>[x.date,x.type||'',x.desc||'',R(x.amt)]).concat(L.length?[{b:1,c:['','','Total',R(sum(L,x=>x.amt))]}]:[]),{size:8,empty:'No expenses in this period.'})}
 function secStock(d){const m=stk(),L=db.P.slice().sort((a,b)=>(a.cat||'').localeCompare(b.cat||'')||a.name.localeCompare(b.name));let v=0,sv=0;
@@ -170,12 +199,12 @@ function secAgro(d,f,t){if(!Array.isArray(db.FM))return;const sd=x=>x||'';
 /* ---------- FULL BUSINESS REPORT / BACKUP ---------- */
 async function bizBuild(f,t,embed){const logo=await logoJpeg(),label=(f||t)?(f||'start')+' to '+(t||'today'):'all records',title=embed?'Backup & full business record':'Full business report';
  const d=newA4(title);letter(d,logo,title,'Period: '+label+'  ·  made '+nowS()+(embed?'\nThis PDF contains a hidden full copy of the shop data. To restore: Setup → Restore from backup → choose this PDF.':''));
- const ss=db.S.filter(s=>inR(s.date,f,t)),xs=db.X.filter(x=>inR(x.date,f,t)),us=db.U.filter(u=>inR(u.date,f,t));
- secSummary(d,ss,xs,label);
+ const ss=db.S.filter(s=>inR(s.date,f,t)),xs=db.X.filter(x=>inR(x.date,f,t)),us=db.U.filter(u=>inR(u.date,f,t)),rs=rets().filter(r=>inR(r.date,f,t));
+ secSummary(d,ss,xs,label,rs);
  d.h2('Where the shop stands today');const owed=sum(db.S.filter(s=>s.pay=='Credit'),s=>tot(s)-paid(s));let so=sum(db.U,sowed);const m=stk();let sv=0;db.P.forEach(p=>{if(!svc(p))sv+=Math.max(m[p.name]||0,0)*costNow(p)});
  d.grid([['Stock value (cost)',sv],['Owed by customers',owed],['Owed to suppliers',so],['Advances held',sum(db.A,abal)]],4);
- const dates=[...new Set([...ss.map(s=>s.date),...xs.map(x=>x.date)])].sort().reverse();
- secDaily(d,dates);secProducts(d,ss);secStock(d);secSales(d,ss);secBuy(d,us);secExp(d,xs);secOwed(d);secMore(d,f,t);secAgro(d,f,t);
+ const dates=[...new Set([...ss.map(s=>s.date),...xs.map(x=>x.date),...rs.map(r=>r.date)])].sort().reverse();
+ secDaily(d,dates);secProducts(d,ss,rs);secStock(d);secSales(d,ss);secReturns(d,rs);secBuy(d,us);secExp(d,xs);secOwed(d);secMore(d,f,t);secAgro(d,f,t);
  d.para('— End of report —',{size:8,a:'c',col:d.T.mut});
  let emb=null;if(embed){const js=new TextEncoder().encode('BIZBACKUP-BEGIN:'+(Array.isArray(db.FM)?'agro':'pos')+'\n'+JSON.stringify(db)+'\nBIZBACKUP-END');emb={name:slug()+'-backup-'+td()+'.json',bytes:js}}
  return d.finish(emb,{title:(db.shop.name||'')+' — '+title,author:db.shop.name})}
@@ -187,15 +216,15 @@ async function pdfJson(file){const buf=new Uint8Array(await file.arrayBuffer()),
  const x=JSON.parse(new TextDecoder('utf-8').decode(buf.subarray(nl+1,e)));x._tag=tag;return x}
 
 /* ---------- DAILY / MONTHLY REPORT ---------- */
-function dayReport(share){const dd=st.rd||td();return run('daily report',async()=>{const logo=await logoJpeg(),d=newA4('Daily report '+dd),ss=db.S.filter(s=>s.date==dd),xs=db.X.filter(x=>x.date==dd),us=db.U.filter(u=>u.date==dd);
- letter(d,logo,'Daily report · '+dd,'Made '+nowS());secSummary(d,ss,xs,dd);
+function dayReport(share){const dd=st.rd||td();return run('daily report',async()=>{const logo=await logoJpeg(),d=newA4('Daily report '+dd),ss=db.S.filter(s=>s.date==dd),xs=db.X.filter(x=>x.date==dd),us=db.U.filter(u=>u.date==dd),rs=rets().filter(r=>r.date==dd);
+ letter(d,logo,'Daily report · '+dd,'Made '+nowS());secSummary(d,ss,xs,dd,rs);
  const col=sum(db.S.filter(s=>s.pay=='Credit'),s=>sum(s.pays.filter(p=>p.d==dd&&!p.z),p=>p.a));d.grid([['Credit payments received',col],['Advances received',sum(db.A.filter(a=>a.date==dd),a=>a.amt)],['Cash paid for stock',sum(db.U,u=>cashOut(u,dd))]],3);
- secProducts(d,ss);secSales(d,ss,'Receipts');secExp(d,xs,'Expenses');secBuy(d,us,'Stock received');
+ secProducts(d,ss,rs);secSales(d,ss,'Receipts');secReturns(d,rs,'Returns & refunds');secExp(d,xs,'Expenses');secBuy(d,us,'Stock received');
  try{const cb=cbexp(dd),cl=db.C.find(z=>z.date==dd);d.h2('Cash book');d.grid([['Expected cash in box',cb.c],['Counted cash',cl?cl.cc:'not closed'],['Result',cl?(cl.cc-cb.c==0?'Balanced':(cl.cc<cb.c?'Short by ':'Over by ')+R(Math.abs(cl.cc-cb.c))):'–',cl&&cl.cc!=cb.c?'bad':'']],3)}catch(e){}
  await out(d.finish(null,{title:'Daily report '+dd,author:db.shop.name}),slug()+'-daily-'+dd+'.pdf',share)})}
-function monthReport(share){const m=st.mon;return run('monthly report',async()=>{const logo=await logoJpeg(),d=newA4('Monthly report '+m),ss=db.S.filter(s=>s.date.startsWith(m)),xs=db.X.filter(x=>x.date.startsWith(m)),us=db.U.filter(u=>u.date.startsWith(m));
- letter(d,logo,'Monthly report · '+m,'Made '+nowS());secSummary(d,ss,xs,m);
- const dates=[...new Set([...ss.map(s=>s.date),...xs.map(x=>x.date)])].sort().reverse();secDaily(d,dates);secProducts(d,ss);
+function monthReport(share){const m=st.mon;return run('monthly report',async()=>{const logo=await logoJpeg(),d=newA4('Monthly report '+m),ss=db.S.filter(s=>s.date.startsWith(m)),xs=db.X.filter(x=>x.date.startsWith(m)),us=db.U.filter(u=>u.date.startsWith(m)),rs=rets().filter(r=>(r.date||'').startsWith(m));
+ letter(d,logo,'Monthly report · '+m,'Made '+nowS());secSummary(d,ss,xs,m,rs);
+ const dates=[...new Set([...ss.map(s=>s.date),...xs.map(x=>x.date),...rs.map(r=>r.date)])].sort().reverse();secDaily(d,dates);secProducts(d,ss,rs);secReturns(d,rs,'Returns & refunds');
  const g={};xs.forEach(x=>{g[x.type||'Other']=(g[x.type||'Other']||0)+x.amt});d.h2('Expenses by type');d.table([{h:'Type',w:.7},{h:'Amount',w:.3,a:'r'}],Object.entries(g).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,R(v)]),{empty:'No expenses this month.'});
  secBuy(d,us);await out(d.finish(null,{title:'Monthly report '+m,author:db.shop.name}),slug()+'-monthly-'+m+'.pdf',share)})}
 
@@ -203,5 +232,5 @@ function planPdf(p,share){return run('restock plan',async()=>{const logo=await l
  d.grid([['Budget',p.budget],['Planned spending',p.spent],['Unspent',p.left]],3);d.h2('What to buy');
  d.table([{h:'Product',w:.34},{h:'In stock',w:.1,a:'r'},{h:'Sold '+p.eff+'d',w:.1,a:'r'},{h:'Buy',w:.1,a:'r'},{h:'Unit cost',w:.16,a:'r'},{h:'Cost',w:.2,a:'r'}],p.rows.map(r=>[r.n,String(r.stock),String(r.sold),String(r.qty),R(r.c),R(r.cost)]),{empty:'Nothing to buy.'});
  await out(d.finish(null,{title:'Restock plan',author:db.shop.name}),slug()+'-restock-plan-'+td()+'.pdf',share)})}
-window.X=Object.assign(window.X||{},{receipt,report,reportGo,backup,pdfJson,dayReport,monthReport,planPdf,_Doc:Doc});
+window.X=Object.assign(window.X||{},{receipt,returnReceipt,report,reportGo,backup,pdfJson,dayReport,monthReport,planPdf,_Doc:Doc});
 })();

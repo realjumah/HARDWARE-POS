@@ -65,6 +65,7 @@
     salesOf(n).forEach(s=>{
       e.push({d:s.date,o:0,n:+s.no||0,l:'Receipt #'+s.no,a:tot(s)-(s.advA||0)});
       (s.pays||[]).forEach(p=>e.push({d:p.d,o:1,n:+s.no||0,l:'Payment · receipt #'+s.no,a:-p.a}));
+      rets().forEach(z=>{if(z.sid==s.id&&z.dec>0)e.push({d:z.date,o:1,n:+s.no||0,l:'Return R-'+z.no+' · receipt #'+s.no,a:-z.dec})});
     });
     e.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:a.o-b.o||a.n-b.n);
     let r=0;e.forEach(x=>{r+=x.a;x.r=r});return e;
@@ -171,5 +172,5 @@
     return (s.due?R('Pay by',esc(fdt(s.due))):'')+R('ACCOUNT BALANCE','UGX '+fm(bal(s.cust)));
   }
 
-  window.okpCr={tab,view,pay,cuForm,search,remind,stmt,check,ensure,hint,dl,rt,rh,list};
+  window.okpCr={tab,view,pay,cuForm,search,remind,stmt,check,ensure,hint,dl,rt,rh,list,bal};
 })();
