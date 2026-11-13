@@ -260,5 +260,42 @@ function stockTakePdf(t,share){return run('stock take',async()=>{const logo=awai
   D.map(l=>{const dd=Math.round((l.cnt-l.sys)*1e4)/1e4;return[l.n,qn(l.sys)+' '+l.u,qn(l.cnt)+' '+l.u,sq(dd),mm(Math.round(dd*(+l.c||0))),l.r||'Counted']}),{empty:'No differences. The shelf matches the system.',size:8.5});
  const nd=L.length-D.length;if(nd>0)d.para(nd+' counted product'+(nd>1?'s':'')+' matched the system exactly.',{size:8.5,col:d.T.mut});
  await out(d.finish(null,{title:'Stock take #'+t.no,author:db.shop.name}),slug()+'-stock-take-'+t.no+'-'+(t.date||td())+'.pdf',share)})}
-window.X=Object.assign(window.X||{},{receipt,returnReceipt,report,reportGo,backup,pdfJson,dayReport,monthReport,planPdf,reorderPdf,stockTakePdf,_Doc:Doc});
+
+/* ---------- DAILY CLOSING and PROFIT REPORT (data comes from closing.js / profit.js) ---------- */
+function closingPdf(dd,share){const r=window.okpCl&&okpCl.rec(dd);if(!r)return;return run('daily closing',async()=>{
+ const logo=await logoJpeg(),d=newA4('Daily closing '+dd),v=okpCl.view(r),f=v.f,dt=x=>x==0?'Balanced':x<0?'SHORT by '+R(-x):'OVER by '+R(x);
+ letter(d,logo,'DAILY CLOSING · '+dd,'Closed '+(r.time||'')+' by '+(r.by||'(not recorded)')+(r.chg?'  ·  CHANGED AFTER CLOSING':'')+'  ·  made '+nowS());
+ d.h2('What the books say');
+ d.table([{h:'Item',w:.7},{h:'UGX',w:.3,a:'r'}],[['Opening cash',R(f.oc)]].concat(f.om?[['Opening Mobile Money',R(f.om)]]:[],f.L.filter((z,i)=>i<7||z[1]).map(z=>[z[0],z[2]=='x'?R(z[1])+' (info)':(z[2]=='o'?'-':'+')+R(z[1])]),[{b:1,c:['EXPECTED cash in the box',R(f.ec)]},['Expected on Mobile Money',R(f.em)],['Total expected (Cash book)',R(f.et)]]));
+ d.h2('Count and result');
+ if(v.cash!=null){d.grid([['Cash counted',v.cash],['Cash result',dt(v.dc),v.dc<0?'bad':''],['Expected cash',f.ec]],3);d.grid([['Mobile Money balance',v.mc],['Mobile Money result',dt(v.dm),v.dm<0?'bad':''],['TOTAL RESULT',dt(v.dv),v.dv<0?'bad':'']],3);
+  if(r.den){const t=okpCl.DEN.filter(k=>r.den[k]).map(k=>[fm(k),String(r.den[k]),R(k*r.den[k])]);if(r.den.coin)t.push(['Coins','',R(r.den.coin)]);if(t.length)d.table([{h:'Note',w:.4},{h:'Count',w:.3,a:'r'},{h:'Value',w:.3,a:'r'}],t)}
+  if(r.mnc)d.para('Mobile Money was not counted; it was taken as expected.',{size:8.5,col:d.T.mut})}
+ else d.grid([['Money counted',r.cc],['Result',dt(v.dv),v.dv<0?'bad':'']],2);
+ if(r.note)d.para('Note: '+r.note,{size:9});
+ d.para('Closing balance carried forward as tomorrow\u2019s opening money: UGX '+R(r.cc),{size:9,bold:1});
+ const L=(db.LG||[]).filter(x=>x.date==dd).sort((a,b)=>a.at<b.at?-1:1);
+ if(L.length){d.h2('Log for this day');d.table([{h:'When',w:.2},{h:'What',w:.55},{h:'Who',w:.25}],L.map(x=>[String(x.at).slice(0,16).replace('T',' '),x.act+': '+(x.what||''),x.who||'']),{size:7.5})}
+ await out(d.finish(null,{title:'Daily closing '+dd,author:db.shop.name}),slug()+'-closing-'+dd+'.pdf',share)})}
+function profitPdf(share){const D=window.okpPf&&okpPf.cur();if(!D)return;return run('profit report',async()=>{
+ const logo=await logoJpeg(),d=newA4('Profit report'),pp=x=>x.toFixed(1)+'%';
+ letter(d,logo,'PROFIT REPORT','Period: '+D.from+' to '+D.to+'  ·  '+D.n+' receipts  ·  made '+nowS());
+ d.grid([['Total sales'+(D.retV>0?' (after returns)':''),D.sales],['Cost of goods sold',D.cogs],['GROSS PROFIT',D.gp]],3);
+ d.grid([['Gross margin',pp(D.gm)],['Expenses',D.exp],['NET PROFIT',D.net]],3);
+ if(D.retV>0||D.disc>0)d.para((D.retV>0?'Returns & refunds UGX '+R(D.retV)+' are already taken off sales. ':'')+(D.disc>0?'Discounts given: UGX '+R(D.disc)+' (sales are already after discounts).':''),{size:8.5,col:d.T.mut});
+ d.h2('Expenses by category');d.table([{h:'Category',w:.7},{h:'UGX',w:.3,a:'r'}],D.expCat.map(x=>[x.n,R(x.v)]).concat(D.expCat.length?[{b:1,c:['Total',R(D.exp)]}]:[]),{empty:'No expenses in this period.'});
+ d.h2('Credit and cash collected');
+ d.grid([['Credit sales given',D.credGiven],['Paid so far',D.credPaid],['STILL OWED',D.credOwed]],3);
+ d.grid([['Money received (cash basis)',D.cashSales],['Gross profit, cash collected',D.cashGP],['Net profit, cash collected',D.cashNet]],3);
+ d.h2('Day by day');d.table([{h:'Day',w:.16},{h:'Rcpts',w:.1,a:'r'},{h:'Sales',w:.18,a:'r'},{h:'Gross',w:.18,a:'r'},{h:'Expenses',w:.18,a:'r'},{h:'Net',w:.2,a:'r',bad:1}],D.days.slice().reverse().map(x=>[x.d,String(x.n),R(x.t),R(x.g),R(x.e),(x.net<0?'-':'')+R(Math.abs(x.net))]).concat(D.days.length?[{b:1,c:['Total',String(sum(D.days,x=>x.n)),R(sum(D.days,x=>x.t)),R(sum(D.days,x=>x.g)),R(sum(D.days,x=>x.e)),R(sum(D.days,x=>x.net))]}]:[]),{size:7.5,empty:'No activity in this period.'});
+ const pr=D.prod.slice().sort((a,b)=>b.p-a.p),row=r=>[r.n,String(Math.round(r.q*100)/100),R(r.s),(r.p<0?'-':'')+R(Math.abs(r.p)),pp(r.m)],cols=[{h:'Product',w:.38},{h:'Qty',w:.1,a:'r'},{h:'Sales',w:.18,a:'r'},{h:'Profit',w:.18,a:'r',bad:1},{h:'Margin',w:.16,a:'r'}];
+ d.h2('Best earning products');d.table(cols,pr.slice(0,15).map(row),{size:7.5,empty:'No sales.'});
+ if(pr.length>15){d.h2('Worst earning products');d.table(cols,pr.slice(-10).reverse().map(row),{size:7.5})}
+ d.h2('Categories');d.table([{h:'Category',w:.34},{h:'Sales',w:.22,a:'r'},{h:'Profit',w:.22,a:'r',bad:1},{h:'Margin',w:.22,a:'r'}],D.cat.slice().sort((a,b)=>b.p-a.p).map(c=>[c.n,R(c.s),(c.p<0?'-':'')+R(Math.abs(c.p)),pp(c.m)]),{size:8,empty:'No sales.'});
+ const g=okpPf.S.tgt,lw=D.prod.filter(r=>r.s>0&&r.q>0).sort((a,b)=>a.m-b.m).slice(0,15);
+ d.h2('Lowest margins (target '+g+'%)');d.table([{h:'Product',w:.36},{h:'Margin',w:.14,a:'r',bad:1},{h:'Avg price',w:.17,a:'r'},{h:'Cost',w:.15,a:'r'},{h:'Price for target',w:.18,a:'r'}],lw.map(r=>[r.n,pp(r.m),R(r.avg),R(r.cost),r.m<g&&r.cost>0?R(Math.ceil(r.cost/(1-g/100)/100)*100):'OK']),{size:7.5,empty:'No sales.'});
+ d.para('Cash-collected basis: only money received in the period counts; profit on credit receipts is counted as it is paid.',{size:8,col:d.T.mut});
+ await out(d.finish(null,{title:'Profit report',author:db.shop.name}),slug()+'-profit-'+D.from+'-to-'+D.to+'.pdf',share)})}
+
+window.X=Object.assign(window.X||{},{closing:closingPdf,profit:profitPdf,receipt,returnReceipt,report,reportGo,backup,pdfJson,dayReport,monthReport,planPdf,reorderPdf,stockTakePdf,_Doc:Doc});
 })();

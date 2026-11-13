@@ -290,3 +290,11 @@ details p,details li{font-size:1rem}
 
 /* ---------- Printing keeps receipts and reports as they were ---------- */
 @media print{header,nav{display:none!important}}
+
+/* ---------- Daily closing and profit report ---------- */
+.den{display:grid;grid-template-columns:78px 56px minmax(0,1fr) 56px;gap:8px;align-items:center;margin-bottom:8px}
+.den b{font-size:1rem}
+.den button{min-height:52px;border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);font-size:1.5rem;font-weight:800;color:var(--ink)}
+.den button:active{background:var(--tint)}
+.den input{margin:0;text-align:center;min-height:52px;font-size:1.2rem;font-weight:700}
+.den .ds{grid-column:1/-1;text-align:right;margin-top:-4px}
