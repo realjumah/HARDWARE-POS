@@ -1,5 +1,5 @@
-const CACHE_NAME = 'okpotani-hardware-firebase-v21';
-const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './theme.css', './firebase-config.js', './firebase-bundle.js', './cloud.js', './subscription.js', './pdf.js', './finder.js', './assistant.js', './credit.js', './returns.js'];
+const CACHE_NAME = 'okpotani-hardware-firebase-v22';
+const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './theme.css', './firebase-config.js', './firebase-bundle.js', './cloud.js', './subscription.js', './pdf.js', './finder.js', './assistant.js', './credit.js', './returns.js', './stock.js'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
@@ -13,7 +13,7 @@ self.addEventListener('fetch', event => {
   // App files that change often (and the page itself): ask the network first and revalidate, so an update appears on the next
   // open when online. They still work offline from the saved copy. Big static files (firebase-bundle.js, icons) stay cache-first.
   const path = new URL(req.url).pathname;
-  const isFresh = req.mode === 'navigate' || /(\/|\/index\.html|\/cloud\.js|\/pdf\.js|\/finder\.js|\/assistant\.js|\/credit\.js|\/returns\.js|\/theme\.css|\/subscription\.js|\/manifest\.webmanifest)$/.test(path);
+  const isFresh = req.mode === 'navigate' || /(\/|\/index\.html|\/cloud\.js|\/pdf\.js|\/finder\.js|\/assistant\.js|\/credit\.js|\/returns\.js|\/stock\.js|\/theme\.css|\/subscription\.js|\/manifest\.webmanifest)$/.test(path);
   if (isFresh) {
     event.respondWith(fetch(req, { cache: 'no-cache' }).then(resp => {
       if (resp && resp.ok && resp.type === 'basic') { const copy = resp.clone(); caches.open(CACHE_NAME).then(c => c.put(req, copy)); }
@@ -46,8 +46,13 @@ self.addEventListener('fetch', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+  const to = (event.notification.data && event.notification.data.to) || '';
   event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-    if (list.length) return list[0].focus();
-    return self.clients.openWindow('./');
+    if (list.length) {
+      const c = list[0];
+      try { c.postMessage({ type: 'okp-open', to }); } catch (e) {}
+      return c.focus();
+    }
+    return self.clients.openWindow('./' + (to ? '?open=' + to : ''));
   }));
 });

@@ -3,6 +3,8 @@
  *   X.dayReport(share)    daily report as PDF
  *   X.monthReport(share)  monthly report as PDF (latest day first)
  *   X.report(share)       FULL business report as PDF (optional date range)
+ *   X.reorderPdf(p,share)   reorder list for a supplier (used by stock.js)
+ *   X.stockTakePdf(t,share) one stock take with its differences (used by stock.js)
  *   X.backup(share)       BACKUP as PDF: readable report + a hidden copy of all data inside, so it can be restored
  *   X.pdfJson(file)       reads a backup PDF made by X.backup() and returns the data (used by Restore)
  * share=true opens the phone's share sheet (WhatsApp, email, Drive...); otherwise the file is downloaded.
@@ -232,5 +234,31 @@ function planPdf(p,share){return run('restock plan',async()=>{const logo=await l
  d.grid([['Budget',p.budget],['Planned spending',p.spent],['Unspent',p.left]],3);d.h2('What to buy');
  d.table([{h:'Product',w:.34},{h:'In stock',w:.1,a:'r'},{h:'Sold '+p.eff+'d',w:.1,a:'r'},{h:'Buy',w:.1,a:'r'},{h:'Unit cost',w:.16,a:'r'},{h:'Cost',w:.2,a:'r'}],p.rows.map(r=>[r.n,String(r.stock),String(r.sold),String(r.qty),R(r.c),R(r.cost)]),{empty:'Nothing to buy.'});
  await out(d.finish(null,{title:'Restock plan',author:db.shop.name}),slug()+'-restock-plan-'+td()+'.pdf',share)})}
-window.X=Object.assign(window.X||{},{receipt,returnReceipt,report,reportGo,backup,pdfJson,dayReport,monthReport,planPdf,_Doc:Doc});
+
+/* ---------- STOCK CONTROL: reorder list and stock take (used by stock.js) ---------- */
+const qn=x=>(Math.round((+x||0)*1e4)/1e4).toLocaleString('en-US',{maximumFractionDigits:4});
+const sq=x=>(x>0?'+':x<0?'-':'')+qn(Math.abs(x));
+const mm=x=>(x<0?'-':'')+fm(Math.abs(x));
+function reorderPdf(p,share){return run('reorder list',async()=>{const logo=await logoJpeg(),d=newA4('Reorder list'),rows=p.rows||[];
+ letter(d,logo,'Reorder list','Made '+nowS());
+ const g={};rows.forEach(r=>{(g[r.sup||'']=g[r.sup||'']||[]).push(r)});
+ const keys=Object.keys(g).sort((a,b)=>(a||'~').localeCompare(b||'~'));
+ d.grid([['Items to order',String(rows.length)],['Suppliers',String(keys.length)],['Out of stock',String(rows.filter(r=>r.out).length)]],3);
+ keys.forEach(k=>{d.h2(k?'Supplier: '+k:'Supplier not recorded');
+  d.table([{h:'No.',w:.08},{h:'Product',w:.5},{h:'In stock',w:.17,a:'r'},{h:'Order',w:.25,a:'r',b:true}],g[k].map((r,i)=>[String(i+1),r.n,qn(r.stock)+' '+r.unit,qn(r.qty)+' '+r.unit]),{size:9})});
+ d.para('Please confirm availability and price. Thank you.',{size:9,col:d.T.mut,gap:4});
+ await out(d.finish(null,{title:'Reorder list',author:db.shop.name}),slug()+'-reorder-list-'+td()+'.pdf',share)})}
+function stockTakePdf(t,share){return run('stock take',async()=>{const logo=await logoJpeg(),d=newA4('Stock take #'+t.no);
+ const L=(t.lines||[]).filter(l=>l.cnt!=null),D=L.filter(l=>Math.round((l.cnt-l.sys)*1e4)!=0);
+ let sh=0,su=0,ns=0,ng=0;D.forEach(l=>{const dd=l.cnt-l.sys,v=Math.round(dd*(+l.c||0));if(dd<0){ns++;sh+=v}else{ng++;su+=v}});const net=sh+su;
+ const stl=t.st=='posted'?'Posted '+(t.pd||''):t.st=='reversed'?'Reversed '+(t.rd||''):'DRAFT - not posted yet';
+ letter(d,logo,'Stock take #'+t.no+' - '+t.scope,'Started '+fdt(t.date,t.time)+'  ·  Counted by: '+(t.by||'not recorded')+(t.ap?'  ·  Approved by: '+t.ap:'')+'  ·  '+stl+(t.note?'  ·  '+t.note:''));
+ d.grid([['Products counted',L.length+' of '+(t.lines||[]).length],[net<0?'Value LOST (at cost)':net>0?'Value GAINED (at cost)':'Net value',net],['Differences',String(D.length)]],3);
+ d.grid([['Shortages ('+ns+')',sh],['Surpluses ('+ng+')',su]],3);
+ d.h2('Differences');
+ d.table([{h:'Product',w:.30},{h:'System',w:.11,a:'r'},{h:'Counted',w:.11,a:'r'},{h:'Diff',w:.10,a:'r',bad:true},{h:'Value (cost)',w:.17,a:'r',bad:true},{h:'Reason',w:.21}],
+  D.map(l=>{const dd=Math.round((l.cnt-l.sys)*1e4)/1e4;return[l.n,qn(l.sys)+' '+l.u,qn(l.cnt)+' '+l.u,sq(dd),mm(Math.round(dd*(+l.c||0))),l.r||'Counted']}),{empty:'No differences. The shelf matches the system.',size:8.5});
+ const nd=L.length-D.length;if(nd>0)d.para(nd+' counted product'+(nd>1?'s':'')+' matched the system exactly.',{size:8.5,col:d.T.mut});
+ await out(d.finish(null,{title:'Stock take #'+t.no,author:db.shop.name}),slug()+'-stock-take-'+t.no+'-'+(t.date||td())+'.pdf',share)})}
+window.X=Object.assign(window.X||{},{receipt,returnReceipt,report,reportGo,backup,pdfJson,dayReport,monthReport,planPdf,reorderPdf,stockTakePdf,_Doc:Doc});
 })();
