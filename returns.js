@@ -116,7 +116,7 @@ function pickList(q){
 function begin(sid){
  const s=sById(sid);if(!s)return;
  if(!lines(s).some(l=>leftQ(s,l.n)>0)){modal();return alert('Everything on receipt #'+s.no+' has already been returned.')}
- D={sid:s.id,q:{},back:{},reason:'',note:'',date:td(),time:'',by:db.lastSb||'',mode:defMode(s),mpay:'cash',xit:[],xpay:'Cash'};
+ D={sid:s.id,q:{},back:{},reason:'',note:'',date:td(),time:'',by:(window.okpAcc&&okpAcc.name())||db.lastSb||'',mode:defMode(s),mpay:'cash',xit:[],xpay:'Cash'};
  formShow()}
 
 /* ---------- the return form ---------- */
@@ -238,7 +238,7 @@ function reverse(rid){
  if(xs){if(A().some(z=>!z.rev&&z.sid==xs.id))return alert('The exchange receipt #'+xs.no+' has its own return. Reverse that return first.');
   if(sum(xs.pays||[],p=>p.a)>0)return alert('The customer has already made payments on exchange receipt #'+xs.no+'. Deal with those payments first.')}
  askc('Reverse return R-'+r.no+'?\n\n• Items that went back to stock are taken out of stock again.\n• Cash / Mobile Money refunds disappear from the cash book.\n• What the customer owes goes back up by UGX '+fm(r.dec)+'.\n'+(xs?'• Exchange receipt #'+xs.no+' is deleted.\n':'')+'\nUse this only to correct a mistake.',()=>{
-  r.rev={date:td(),time:nowt(),by:db.lastSb||''};
+  r.rev={date:td(),time:nowt(),by:(window.okpAcc&&okpAcc.name())||db.lastSb||''};
   if(xs)db.S=db.S.filter(x=>x.id!=xs.id);
   save();render();view(rid);toast('Return reversed')})}
 

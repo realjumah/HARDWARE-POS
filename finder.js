@@ -70,7 +70,7 @@ function corpus(){const C=[],has=Array.isArray(db.FM),ag=window.ag||{};
   (db.BY||[]).forEach(b=>add('Market','',b.name,[b.type,b.loc,b.tel].filter(Boolean).join(' · '),'',b.prods||'',()=>ag.byopen(b.id)));
   (db.PT||[]).forEach(p=>add('Partners','',p.name,[p.org,p.role,p.tel].filter(Boolean).join(' · '),'',p.cat||'',()=>ag.ptopen(p.id)));
   (db.LC||[]).forEach(l=>add('Documents','',l.name,[l.no,l.issuer].filter(Boolean).join(' · '),'',l.exp||'',()=>ag.lform(l.id)))}
- return C}
+ return window.okpAcc?okpAcc.corpus(C):C}
 function scopes(C){const o=[['all','All']],seen={};C.forEach(c=>{if(!seen[c.sec]){seen[c.sec]=1}});Object.keys(seen).forEach(s=>o.push([s,s]));return o}
 function results(){const C=corpus(),w=words(G.q);G.res=[];
  let L=C.filter(c=>(G.scope=='all'||c.sec==G.scope)&&hit(c.text,w));

@@ -297,5 +297,9 @@ function profitPdf(share){const D=window.okpPf&&okpPf.cur();if(!D)return;return 
  d.para('Cash-collected basis: only money received in the period counts; profit on credit receipts is counted as it is paid.',{size:8,col:d.T.mut});
  await out(d.finish(null,{title:'Profit report',author:db.shop.name}),slug()+'-profit-'+D.from+'-to-'+D.to+'.pdf',share)})}
 
-window.X=Object.assign(window.X||{},{closing:closingPdf,profit:profitPdf,receipt,returnReceipt,report,reportGo,backup,pdfJson,dayReport,monthReport,planPdf,reorderPdf,stockTakePdf,_Doc:Doc});
+function auditPdf(rows,sub,share){return run('audit log',async()=>{
+ const logo=await logoJpeg(),d=newA4('Audit log');letter(d,logo,'AUDIT LOG',sub+'  ·  made '+nowS());
+ d.table([{h:'When',w:.15},{h:'Who',w:.13},{h:'Action',w:.17},{h:'Details (before / after)',w:.55}],rows.map(r=>[r.when,r.who,r.act,r.det]),{size:7,empty:'No entries match these filters.'});
+ await out(d.finish(null,{title:'Audit log',author:db.shop.name}),slug()+'-audit-log-'+td()+'.pdf',share)})}
+window.X=Object.assign(window.X||{},{auditPdf,closing:closingPdf,profit:profitPdf,receipt,returnReceipt,report,reportGo,backup,pdfJson,dayReport,monthReport,planPdf,reorderPdf,stockTakePdf,_Doc:Doc});
 })();

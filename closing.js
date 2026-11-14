@@ -28,7 +28,7 @@
   const wk=d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short'});
   function who(){
     let e='';try{const u=window.okpotaniCloudCore&&window.okpotaniCloudCore.state&&window.okpotaniCloudCore.state.user;e=u&&(u.displayName||u.email)||''}catch(x){}
-    return db.lastCb||e||(db.shop&&db.shop.mgr)||'(not recorded)';
+    return (window.okpAcc&&okpAcc.name())||db.lastCb||e||(db.shop&&db.shop.mgr)||'(not recorded)';
   }
   function log(date,act,what,by){lg().push({id:id(),at:iso(),date,act,who:by||who(),what})}
 
@@ -211,7 +211,7 @@
         +'<div id="ccr"></div>'
         +'<h3>3 · Mobile Money balance</h3><label>Balance on the Mobile Money line now (UGX). Expected: '+fm(f.em)+'</label><input id="mc" type="number" inputmode="numeric" value="'+esc(S.mc)+'" oninput="okpCl.setMc(this.value)"><div id="mcr"></div>'
         +'<h3>4 · Close</h3><div id="tdr"></div>'
-        +'<label>Closed by</label><input id="cby" list="cbyl" value="'+esc(S.by||db.lastCb||db.lastSb||'')+'" oninput="okpCl.setBy(this.value)" placeholder="Your name"><datalist id="cbyl">'+[...new Set([...(db.staff||[]),db.shop&&db.shop.mgr].filter(Boolean))].map(n=>'<option value="'+esc(n)+'">').join('')+'</datalist>'
+        +'<label>Closed by</label><input id="cby" list="cbyl" value="'+esc(S.by||(window.okpAcc&&okpAcc.name())||db.lastCb||db.lastSb||'')+'" oninput="okpCl.setBy(this.value)" placeholder="Your name"><datalist id="cbyl">'+[...new Set([...(db.staff||[]),db.shop&&db.shop.mgr].filter(Boolean))].map(n=>'<option value="'+esc(n)+'">').join('')+'</datalist>'
         +'<label>Note (optional)</label><input id="cnote" value="'+esc(S.note)+'" oninput="okpCl.setNote(this.value)" placeholder="e.g. 5,000 short, change given to a customer">'
         +'<button class="btn big" onclick="okpCl.close()">🔒 Close the day</button>'
         +'<small>The counted money becomes tomorrow\'s opening money. You can reopen the day later, and that is recorded.</small>';
@@ -248,7 +248,7 @@
   }
   function reopen(d){
     const r=rec(d);if(!r)return;
-    form('Reopen '+fdt(d),[['by','Your name','text'],['why','Reason for reopening','text']],{by:db.lastCb||'',why:''},v=>{
+    form('Reopen '+fdt(d),[['by','Your name','text'],['why','Reason for reopening','text']],{by:(window.okpAcc&&okpAcc.name())||db.lastCb||'',why:''},v=>{
       if(!v.by)return alert('Type your name.'),false;if(!v.why)return alert('Type the reason for reopening.'),false;
       const x=view(r);
       log(d,'reopen','Reopened because: '+v.why+'. It had been closed by '+(r.by||'?')+' at '+(r.time||'?')+' with cash counted '+fm(x.cash!=null?x.cash:r.cc)+' ('+dtxt(x.dv)+')'+(r.chg?'; records had changed after closing':'')+'.',v.by);

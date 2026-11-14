@@ -17,7 +17,7 @@
 
   // ---- what gets synced -------------------------------------------------------------------------
   // Arrays of records that each have a unique `id`. If you ever add a new array like this to the app, add it here.
-  const COLS=['P','S','U','X','A','C','M','O','J','CU','R','AD','ST','LG'];
+  const COLS=['P','S','U','X','A','C','M','O','J','CU','R','AD','ST','LG','SF','AU','AA'];
   // Per-phone bookkeeping that must NOT be shared between phones.
   const LOCAL_ONLY=['seq','lastBk'];
   // Everything else at the top level of the data (shop, L, staff, PL, mmr, lastSb ...) is synced as one small doc each.
@@ -213,7 +213,7 @@
     const changed=applyItems(db,items,false);
     if(maxU>state.cursor){state.cursor=maxU;lsSet(LSK.cursor,maxU)}
     persistBase();
-    if(changed){persistLocal();status('Updated from another device · '+timeNow());rerenderSoon()}
+    if(changed){persistLocal();try{if(window.okpAudit)okpAudit.remote(items.map(i=>i.key))}catch(e){}status('Updated from another device · '+timeNow());rerenderSoon()}
   }
 
   // ---- writing: send only what changed --------------------------------------------------------------------
@@ -406,7 +406,7 @@
     const savedBase=state.base;state.base={};
     applyItems(nd,items,true);
     if(!nd.P||!nd.shop){state.base=savedBase;throw new Error('This shop has no records in the cloud yet. Ask the owner to finish setting it up.')}
-    db=nd;if(typeof mig==='function')mig();
+    db=nd;if(typeof mig==='function')mig();try{if(window.okpAudit)okpAudit.rebase();if(window.okpAcc&&okpAcc.gate)okpAcc.gate()}catch(e){}
     persistLocal();
     setWs(ws);state.pending=null;state.cursor=maxU;lsSet(LSK.cursor,maxU);persistBase();
     listen();

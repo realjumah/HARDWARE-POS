@@ -53,7 +53,7 @@
   }
 
   /* ---------- helpers for screens ---------- */
-  const whoDef=()=>{try{return localStorage.getItem(KB)||db.lastSb||''}catch(e){return db.lastSb||''}};
+  const whoDef=()=>{try{return ((window.okpAcc&&okpAcc.name()))||localStorage.getItem(KB)||db.lastSb||''}catch(e){return db.lastSb||''}};
   const rem=v=>{try{if(v)localStorage.setItem(KB,v)}catch(e){}};
   function whoH(idn,lab){const L=db.staff||[],d=whoDef();
     return '<label>'+lab+'</label>'+(L.length?'<select id="'+idn+'"><option value="">(not recorded)</option>'+L.map(n=>'<option'+(n==d?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select>':'<input id="'+idn+'" placeholder="Name" value="'+esc(d)+'">');
@@ -75,7 +75,7 @@
     const cards='<div class="cards"><div class="stat sk-card '+(c.n?'sk-warn':'sk-ok')+'"><small>At or below reorder level</small><span class="num">'+c.n+'</span></div><div class="stat sk-card '+(c.out?'sk-bad':'sk-ok')+'"><small>Out of stock</small><span class="num">'+c.out+'</span></div></div>';
     const f='<div class="seg"><button class="'+(O.lf=='all'?'on':'')+'" onclick="okpStk.lf(\'all\')">All low ('+c.n+')</button><button class="'+(O.lf=='out'?'on':'')+'" onclick="okpStk.lf(\'out\')">Out of stock ('+c.out+')</button></div>';
     const rows=L.map(x=>{const p=x.p,lb=x.lb;
-      return '<button class="item sk-item '+(x.out?'sk-bad':'sk-warn')+'" onclick="okpStk.prod('+p.id+')"><span class="nm"><b>'+esc(p.name)+'</b><small>Reorder at '+qf(x.re)+' '+esc(p.unit||'')+(p.cat?' · '+esc(p.cat):'')+'</small><small>'+(lb?'Last bought from <b>'+esc(x.sup||'(no name)')+'</b> · '+fdt(lb.date)+' · UGX '+fm(lb.c)+' each':'Not bought yet (no supplier recorded)')+'</small></span><span class="pr">'+qf(x.s)+' '+esc(p.unit||'')+'<br>'+badge(p,x.s)+'</span></button>'}).join('');
+      return '<button class="item sk-item '+(x.out?'sk-bad':'sk-warn')+'" onclick="okpStk.prod('+p.id+')"><span class="nm"><b>'+esc(p.name)+'</b><small>Reorder at '+qf(x.re)+' '+esc(p.unit||'')+(p.cat?' · '+esc(p.cat):'')+'</small><small>'+(lb?'Last bought from <b>'+esc(x.sup||'(no name)')+'</b> · '+fdt(lb.date)+(can('see_cost')?' · UGX '+fm(lb.c)+' each':''):'Not bought yet (no supplier recorded)')+'</small></span><span class="pr">'+qf(x.s)+' '+esc(p.unit||'')+'<br>'+badge(p,x.s)+'</span></button>'}).join('');
     return segH()+cards+(c.n?'<button class="btn big" onclick="okpStk.go(\'ro\')">Make reorder list</button>':'')+f+(rows||'<div class="empty">'+(c.n?'Nothing out of stock.':'All stock levels are above their reorder level.')+'</div>')+
       '<h3>Alerts on this phone</h3>'+
       '<button class="item row" onclick="okpStk.togBanner()"><span class="nm"><b>Banner when I open the app</b><small>Shows which items are low or newly low</small></span><span class="pr '+(pf.banner?'in':'')+'">'+(pf.banner?'ON':'OFF')+'</span></button>'+
@@ -352,7 +352,7 @@
   function adjView(){
     const p=O.ap&&pByName(O.ap),m=stk(),cur=p?rnd(m[p.name]||0):0,rs=O.dir=='out'?RS_OUT:RS_IN;
     let h=segH();
-    h+='<label>Product</label>'+(p?'<div class="item" style="cursor:default"><span class="nm"><b>'+esc(p.name)+'</b><small>In stock now: <b>'+qf(cur)+' '+esc(p.unit||'')+'</b> · cost UGX '+fm(costNow(p))+'</small></span><button class="lnk" onclick="okpStk.apClr()">Change</button></div>':
+    h+='<label>Product</label>'+(p?'<div class="item" style="cursor:default"><span class="nm"><b>'+esc(p.name)+'</b><small>In stock now: <b>'+qf(cur)+' '+esc(p.unit||'')+'</b>'+(can('see_cost')?' · cost UGX '+fm(costNow(p)):'')+'</small></span><button class="lnk" onclick="okpStk.apClr()">Change</button></div>':
       '<input id="ap_q" type="search" autocomplete="off" placeholder="Search product…" value="'+esc(O.apq)+'" oninput="okpStk.apq(this.value)"><div id="ap_res">'+apRes()+'</div>');
     if(p){
       h+='<label>What happened</label><div class="seg"><button class="'+(O.dir=='out'?'on':'')+'" onclick="okpStk.dir(\'out\')">Remove from stock</button><button class="'+(O.dir=='in'?'on':'')+'" onclick="okpStk.dir(\'in\')">Add to stock</button></div>'+
@@ -389,7 +389,7 @@
   function viewAdj(i){
     const a=ads().find(x=>x.id==i);if(!a)return;const p=pByName(a.n),after=rnd((+a.bf||0)+a.q);
     const R=(x,y)=>'<div class="item" style="cursor:default"><span class="nm"><b>'+x+'</b></span><span class="pr" style="font-weight:600">'+y+'</span></div>';
-    modal('<h2>Stock adjustment</h2>'+R('Product',esc(a.n))+R('Date',fdt(a.date,a.time))+R('Reason',esc(a.r))+R('Quantity',sg(a.q)+' '+esc(unitOf(a.n)))+R('Value at cost','UGX '+mf(Math.round(a.q*(+a.c||0))))+(a.bf!=null?R('Stock before / after',qf(a.bf)+' → '+qf(after)):'')+R('Done by',esc(a.by||'(not recorded)'))+(a.ap?R('Approved by',esc(a.ap)):'')+(a.note?R('Note',esc(a.note)):'')+
+    modal('<h2>Stock adjustment</h2>'+R('Product',esc(a.n))+R('Date',fdt(a.date,a.time))+R('Reason',esc(a.r))+R('Quantity',sg(a.q)+' '+esc(unitOf(a.n)))+(can('see_cost')?R('Value at cost','UGX '+mf(Math.round(a.q*(+a.c||0)))):'')+(a.bf!=null?R('Stock before / after',qf(a.bf)+' → '+qf(after)):'')+R('Done by',esc(a.by||'(not recorded)'))+(a.ap?R('Approved by',esc(a.ap)):'')+(a.note?R('Note',esc(a.note)):'')+
       (a.rev?'<p class="low">Reversed on '+fdt(a.rd)+'. It no longer changes stock.</p>':'')+
       (!a.rev&&!a.tid?'<button class="btn del" onclick="okpStk.revAdj('+a.id+')">Reverse this adjustment</button>':'')+
       (!a.rev&&a.tid?'<small>This came from a stock take. To undo it, reverse the whole stock take in History.</small>':'')+

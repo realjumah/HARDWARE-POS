@@ -68,8 +68,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);box
 input:focus-visible,textarea:focus-visible{outline:none}
 
 /* ---------- App bar ---------- */
-header{position:relative;z-index:6;flex:none;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto auto;
-  grid-template-areas:"b t i s c h" "b d i s c h";align-items:center;column-gap:6px;row-gap:0;
+header{position:relative;z-index:6;flex:none;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto auto auto;
+  grid-template-areas:"b t i u s c h" "b d i u s c h";align-items:center;column-gap:6px;row-gap:0;
   padding:calc(10px + env(safe-area-inset-top,0px)) calc(10px + env(safe-area-inset-right,0px)) 20px calc(14px + env(safe-area-inset-left,0px));
   background:linear-gradient(160deg,var(--head2) 0%,var(--head) 75%);color:var(--headink);
   border-radius:0 0 26px 26px;box-shadow:0 4px 16px rgba(0,0,0,.25)}
