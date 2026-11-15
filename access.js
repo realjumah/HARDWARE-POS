@@ -13,6 +13,9 @@
 (function(){
 'use strict';
 if(window.okpAcc)return;
+/* If anything goes wrong while starting, say so on screen instead of loading for ever. */
+const showErr=m=>{try{const e=document.getElementById('lk');if(e&&!(e.querySelector&&e.querySelector('.lkb'))){e.style.display='flex';e.dataset.on='1';e.innerHTML='<div style="padding:22px;text-align:center;font:15px system-ui;max-width:360px"><b>Startup problem</b><br><br>'+String(m).replace(/[<&]/g,' ')+'<br><br><button onclick="location.reload()" style="padding:14px 22px;font-size:17px">Reload</button></div>'}}catch(x){}};
+window.addEventListener('error',ev=>showErr((ev.message||'error')+' ('+String(ev.filename||'').split('/').pop()+':'+ev.lineno+')'));
 
 /* ---------------------------------------------------------------- small helpers */
 const $=s=>document.querySelector(s);
@@ -918,6 +921,6 @@ window.okpAcc={on,can,gate,route,cards,more,sub:subOk,me,name:()=>cur?cur.name:'
 window.okpAudit={pre,rebase,remote,log:note,verify,entries:allEntries,archive,_dev:DEV};
 /* start: cover the app straight away */
 css();bindOverlay();idleWatch();chip();
-try{if(on())showLock();else showSetup()}catch(e){console.error(e)}
+try{if(on())showLock();else showSetup()}catch(e){console.error(e);showErr('Lock screen: '+(e&&e.message||e))}
 if(document.readyState==='complete')setTimeout(install,0);else window.addEventListener('load',()=>setTimeout(install,0));
 })();
