@@ -423,7 +423,7 @@ function css(){
 }
 function ov(){let e=$('#lk');if(!e){e=document.createElement('div');e.id='lk';document.body.appendChild(e)}return e}
 const shopName=()=>{const n=(db.shop&&db.shop.name)||'';return n===n.toUpperCase()?n.toLowerCase().replace(/(^|[\s(-])([a-z])/g,(m,a,b)=>a+b.toUpperCase()):n};
-const visible=()=>{const e=$('#lk');return !!e&&e.style.display!=='none'&&e.dataset.on==='1'};
+const visible=()=>{const e=$('#lk');return !!e&&e.style.display!=='none'&&e.dataset.on==='1'&&!!e.querySelector('.lkb')};
 function hide(){const e=ov();e.style.display='none';e.dataset.on='0';e.innerHTML=''}
 function showLock(){if(visible()&&L.mode!=='setup')return;css();L.mode='pick';L.pin='';L.msg='';L.busy=false;const l=ls.get(LK.last,null),A=SF().filter(act);L.sel=(A.find(u=>u.id===l)||(A.length===1?A[0]:null)||{}).id||null;draw()}
 function showSetup(){if(visible()&&L.mode==='setup')return;css();L.mode='setup';L.step=1;L.pin='';L.msg='';L.busy=false;L.data={name:(db.shop&&db.shop.mgr)||'',phone:''};draw()}
