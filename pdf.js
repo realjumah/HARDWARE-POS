@@ -301,5 +301,22 @@ function auditPdf(rows,sub,share){return run('audit log',async()=>{
  const logo=await logoJpeg(),d=newA4('Audit log');letter(d,logo,'AUDIT LOG',sub+'  ·  made '+nowS());
  d.table([{h:'When',w:.15},{h:'Who',w:.13},{h:'Action',w:.17},{h:'Details (before / after)',w:.55}],rows.map(r=>[r.when,r.who,r.act,r.det]),{size:7,empty:'No entries match these filters.'});
  await out(d.finish(null,{title:'Audit log',author:db.shop.name}),slug()+'-audit-log-'+td()+'.pdf',share)})}
-window.X=Object.assign(window.X||{},{auditPdf,closing:closingPdf,profit:profitPdf,receipt,returnReceipt,report,reportGo,backup,pdfJson,dayReport,monthReport,planPdf,reorderPdf,stockTakePdf,_Doc:Doc});
+/* ---------- SUPPLIERS: statement and payables report ---------- */
+const sslug=n=>String(n||'supplier').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,24)||'supplier';
+function supStmtPdf(k,share){const r=window.okpSp&&okpSp.list().find(x=>x.k==k);if(!r)return;return run('supplier statement',async()=>{
+ const logo=await logoJpeg(),d=newA4('Supplier statement '+r.name),s=r.s||{},e=okpSp.entries(r.name),addr=[s.street,s.town,s.district].filter(Boolean).join(', ');
+ letter(d,logo,'Supplier statement · '+r.name,'Made '+nowS());
+ d.para([s.person?'Contact: '+s.person:'',s.phone?'Phone: '+s.phone:'',s.email||'',addr?'Address: '+addr:'',s.terms?'Terms: '+s.terms:''].filter(Boolean).join('   ·   ')||'No contact details saved',{size:9,gap:4});
+ d.grid([['Balance we owe',r.bal],['Overdue',r.over],['Due in 7 days',r.week]],3);
+ d.h2('Statement');d.table([{h:'Date',w:.16},{h:'Details',w:.44},{h:'Amount',w:.2,a:'r'},{h:'Balance',w:.2,a:'r'}],e.map(x=>[x.d,x.l,(x.a<0?'-':'')+R(Math.abs(x.a)),R(x.r)]),{size:8,empty:'No credit history yet.'});
+ await out(d.finish(null,{title:'Supplier statement '+r.name,author:db.shop.name}),slug()+'-supplier-'+sslug(r.name)+'-'+td()+'.pdf',share)})}
+function supReportPdf(share){const m=okpSp.mon();return run('payables report',async()=>{
+ const logo=await logoJpeg(),d=newA4('Supplier payables '+m),ar=okpSp.ageRows(),mo=okpSp.monthly(m),T=i=>sum(ar,x=>x.a[i]);
+ letter(d,logo,'Supplier payables report','Month '+m+' · made '+nowS());
+ d.grid([['Total owed to suppliers',sum(ar,x=>x.bal)],['Overdue',T(1)+T(2)+T(3)],['30+ days overdue',T(3)]],3);
+ d.h2('Payables ageing (days past the due date)');d.table([{h:'Supplier',w:.28},{h:'Not due',w:.17,a:'r'},{h:'1-7',w:.14,a:'r'},{h:'8-30',w:.14,a:'r'},{h:'30+',w:.12,a:'r'},{h:'Total',w:.15,a:'r'}],ar.map(x=>[x.name,R(x.a[0]),R(x.a[1]),R(x.a[2]),R(x.a[3]),R(x.bal)]).concat(ar.length?[{b:1,c:['Total',R(T(0)),R(T(1)),R(T(2)),R(T(3)),R(sum(ar,x=>x.bal))]}]:[]),{size:8,empty:'You owe no supplier.'});
+ d.h2('Purchases and payments per supplier · '+m);d.table([{h:'Supplier',w:.3},{h:'Bought',w:.18,a:'r'},{h:'Paid',w:.18,a:'r'},{h:'Returned',w:.16,a:'r'},{h:'Owed now',w:.18,a:'r'}],mo.map(x=>[x.name,R(x.bought),R(x.paid),R(x.ret),R(x.bal)]).concat(mo.length?[{b:1,c:['Total',R(sum(mo,x=>x.bought)),R(sum(mo,x=>x.paid)),R(sum(mo,x=>x.ret)),R(sum(mo,x=>x.bal))]}]:[]),{size:8,empty:'No supplier activity this month.'});
+ await out(d.finish(null,{title:'Supplier payables '+m,author:db.shop.name}),slug()+'-payables-'+m+'.pdf',share)})}
+
+window.X=Object.assign(window.X||{},{supStmt:supStmtPdf,supReport:supReportPdf,auditPdf,closing:closingPdf,profit:profitPdf,receipt,returnReceipt,report,reportGo,backup,pdfJson,dayReport,monthReport,planPdf,reorderPdf,stockTakePdf,_Doc:Doc});
 })();
