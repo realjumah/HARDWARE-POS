@@ -1,5 +1,5 @@
-const CACHE_NAME = 'okpotani-hardware-firebase-v27';
-const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './theme.css', './firebase-config.js', './firebase-bundle.js', './cloud.js', './subscription.js', './pdf.js', './finder.js', './assistant.js', './credit.js', './suppliers.js', './closing.js', './profit.js', './returns.js', './stock.js', './access.js', './scan.js', './zxing.min.js', './qrcode.js'];
+const CACHE_NAME = 'okpotani-hardware-firebase-v28';
+const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', './theme.css', './firebase-config.js', './firebase-bundle.js', './cloud.js', './subscription.js', './pdf.js', './finder.js', './assistant.js', './credit.js', './suppliers.js', './closing.js', './profit.js', './returns.js', './drive.js', './stock.js', './access.js', './scan.js', './zxing.min.js', './qrcode.js'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
