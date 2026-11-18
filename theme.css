@@ -157,6 +157,9 @@ main{padding:20px calc(16px + env(safe-area-inset-right,0px)) 28px calc(16px + e
 .chev{flex:none;display:grid;place-items:center;color:var(--acc)}
 .chev svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 
+.jd{display:block;margin:0 0 14px;padding:14px 16px;border-radius:var(--r);background:var(--tint);color:var(--ink);font-size:.9375rem;line-height:1.45}
+#md .jd{margin-top:4px}
+
 /* ---------- Buttons ---------- */
 .btn{position:relative;overflow:hidden;display:block;width:100%;min-height:52px;margin-top:12px;padding:13px 18px;border:0;border-radius:var(--r);
   background:var(--card);color:var(--ink);box-shadow:var(--shadow1);font-size:1rem;font-weight:700;letter-spacing:.005em;transition:transform .1s}
