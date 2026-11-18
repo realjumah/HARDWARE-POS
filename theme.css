@@ -301,3 +301,64 @@ details p,details li{font-size:1rem}
 .den button:active{background:var(--tint)}
 .den input{margin:0;text-align:center;min-height:52px;font-size:1.2rem;font-weight:700}
 .den .ds{grid-column:1/-1;text-align:right;margin-top:-4px}
+
+/* =====================================================================
+   DESKTOP LAYOUT  (Setup > Appearance > Screen layout, or More > Desktop layout)
+   Side menu on the left, wide pages, two-column lists, centred pop-ups.
+   Automatic mode switches to this on screens 900 px wide or more.
+   Screen only: printing and PDFs are not affected.
+   ===================================================================== */
+@media screen{
+html[data-layout=desktop] body{display:grid;grid-template-columns:264px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);grid-template-areas:"nav head" "nav main"}
+html[data-layout=desktop] header{grid-area:head;border-radius:0;padding:16px 32px;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+html[data-layout=desktop] header h1{font-size:1.5rem}
+html[data-layout=desktop] header.home h1{font-size:1.25rem}
+html[data-layout=desktop] main{grid-area:main;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;align-content:start;width:auto;max-width:none;margin:0;
+  padding:28px max(32px,calc((100% - 1180px)/2)) 48px}
+html[data-layout=desktop] main>*{grid-column:1/-1;min-width:0}
+html[data-layout=desktop] main>.item{grid-column:auto}
+html[data-layout=desktop] main>input,html[data-layout=desktop] main>select,html[data-layout=desktop] main>textarea,html[data-layout=desktop] main>label{max-width:640px}
+html[data-layout=desktop] main>.btn{width:auto;min-width:260px;justify-self:start}
+html[data-layout=desktop] #gd{max-width:820px}
+html[data-layout=desktop] .cards{grid-template-columns:repeat(4,minmax(0,1fr))}
+html[data-layout=desktop] .tiles{grid-template-columns:repeat(8,minmax(0,1fr))}
+html[data-layout=desktop] .fxg{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+html[data-layout=desktop] .seg:not(.tabs){grid-template-columns:repeat(auto-fit,minmax(150px,220px))}
+html[data-layout=desktop] .seg.tabs{flex-wrap:wrap;overflow:visible;margin:0 0 18px;padding:2px 0 8px}
+html[data-layout=desktop] .item:hover,html[data-layout=desktop] .tile:hover,html[data-layout=desktop] .fx:hover,html[data-layout=desktop] .stat[role=button]:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(43,39,35,.18)}
+
+/* side menu */
+html[data-layout=desktop] nav{grid-area:nav;display:flex;flex-direction:column;gap:4px;padding:22px 14px 16px;background:var(--head);border-radius:0;box-shadow:2px 0 14px rgba(0,0,0,.22);overflow-y:auto}
+html[data-layout=desktop] nav:before{content:"OKPOTANI HARDWARE";display:block;margin:0 0 12px;padding:6px 12px 18px;border-bottom:1px solid rgba(255,255,255,.14);
+  color:#fff;font-size:.9375rem;font-weight:800;letter-spacing:.07em;line-height:1.3}
+html[data-layout=desktop] nav button{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:14px;flex:none;min-height:50px;padding:6px 14px;border-radius:14px;
+  color:rgba(255,255,255,.8);font-size:1rem;font-weight:700;text-align:left}
+html[data-layout=desktop] nav button .ni{flex:none;width:28px;height:28px;margin:0;border-radius:0;background:none}
+html[data-layout=desktop] nav button:hover{background:rgba(255,255,255,.09)}
+html[data-layout=desktop] nav button.on{background:var(--acc);color:var(--accink)}
+html[data-layout=desktop] nav button.on .ni{background:none;color:var(--accink)}
+html[data-layout=desktop] nav button.lay{margin-top:auto;border:1.5px solid rgba(255,255,255,.22)}
+html[data-layout=desktop] nav button:focus-visible{outline-color:#fff}
+
+/* pop-ups become centred panels */
+html[data-layout=desktop] #md{align-items:center;padding:24px}
+html[data-layout=desktop] #md>div{max-width:680px;max-height:90%;border-radius:var(--r-xl);padding:28px 26px}
+html[data-layout=desktop] #md>div:before{display:none}
+html[data-layout=desktop] #cfs .cfb{max-width:860px}
+html[data-layout=desktop] #cfs .cft{padding-left:max(24px,calc((100% - 860px)/2));padding-right:max(24px,calc((100% - 860px)/2))}
+html[data-layout=desktop] #ts{bottom:28px}
+
+/* narrow window in desktop layout: the side menu shrinks to icons */
+@media(max-width:899px){
+ html[data-layout=desktop] body{grid-template-columns:78px minmax(0,1fr)}
+ html[data-layout=desktop] nav{padding:14px 8px}
+ html[data-layout=desktop] nav:before{content:"OKP";padding:6px 0 14px;text-align:center;font-size:.8125rem}
+ html[data-layout=desktop] nav button{justify-content:center;padding:6px 0}
+ html[data-layout=desktop] nav button .nl{display:none}
+ html[data-layout=desktop] header{padding:12px 16px}
+ html[data-layout=desktop] main{grid-template-columns:minmax(0,1fr);padding:20px 16px 40px}
+ html[data-layout=desktop] main>.item{grid-column:1/-1}
+ html[data-layout=desktop] .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+ html[data-layout=desktop] .tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+}
