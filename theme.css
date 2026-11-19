@@ -160,6 +160,14 @@ main{padding:20px calc(16px + env(safe-area-inset-right,0px)) 28px calc(16px + e
 .jd{display:block;margin:0 0 14px;padding:14px 16px;border-radius:var(--r);background:var(--tint);color:var(--ink);font-size:.9375rem;line-height:1.45}
 #md .jd{margin-top:4px}
 
+
+/* ---------- Cart lines: whole products and bits ---------- */
+.qty .ql{display:block;flex:1;min-width:0;margin:0;font-size:.8125rem;font-weight:600;color:var(--mut)}
+.qty .ql input{margin:4px 0 0}
+.bdg{display:inline-block;vertical-align:middle;margin-left:6px;padding:2px 9px;border-radius:999px;background:var(--acc);color:var(--accink);font-size:.6875rem;font-weight:800;letter-spacing:.06em}
+.ck{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:4px}
+.lnk2{display:inline-block;padding:10px 0;font-size:.9375rem;font-weight:700;color:var(--acct);text-decoration:none}
+
 /* ---------- Buttons ---------- */
 .btn{position:relative;overflow:hidden;display:block;width:100%;min-height:52px;margin-top:12px;padding:13px 18px;border:0;border-radius:var(--r);
   background:var(--card);color:var(--ink);box-shadow:var(--shadow1);font-size:1rem;font-weight:700;letter-spacing:.005em;transition:transform .1s}
